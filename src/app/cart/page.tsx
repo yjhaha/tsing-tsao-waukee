@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
@@ -11,6 +12,26 @@ function fmt(price: number) {
 
 export default function CartPage() {
   const { items, total, count, updateQuantity, removeItem } = useCart()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleCheckout() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Checkout failed')
+      window.location.href = data.url
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -87,14 +108,23 @@ export default function CartPage() {
               </div>
             </div>
 
-            {/* Checkout — Stripe wired in next step */}
+            {/* Error */}
+            {error && (
+              <div className="mb-4 px-4 py-3 bg-red-900/40 border border-red-700/50 rounded-xl text-red-300 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Checkout */}
             <div className="space-y-2">
               <button
-                disabled
-                className="w-full py-4 bg-brand-gold text-slate-900 rounded-xl font-bold text-base opacity-40 cursor-not-allowed select-none"
-                title="Stripe checkout coming next"
+                onClick={handleCheckout}
+                disabled={loading}
+                className="w-full py-4 bg-brand-gold text-slate-900 rounded-xl font-bold text-base
+                           hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150
+                           disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Checkout — Coming Next
+                {loading ? 'Redirecting to checkout…' : `Checkout · ${fmt(total)}`}
               </button>
               <Link
                 href="/menu"
