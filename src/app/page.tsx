@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
+import { FaUtensils, FaPhone, FaMapMarkerAlt } from 'react-icons/fa'
 
 const COLLAGE = [
   { src: '/images/menu/sesame_chicken.jpg', alt: 'Sesame Chicken' },
@@ -36,8 +37,12 @@ export default function HomePage() {
             </h1>
             <div className="w-full max-w-xs space-y-2">
               <div className="grid grid-cols-2 gap-2">
-                <Link href="/menu" className="hero-btn">VIEW MENU 🍴</Link>
-                <a href="tel:+15154902888" className="hero-btn">CALL 📞</a>
+                <Link href="/menu" className="hero-btn gap-2">
+                  <FaUtensils className="text-xs" /> VIEW MENU
+                </Link>
+                <a href="tel:+15154902888" className="hero-btn gap-2">
+                  <FaPhone className="text-xs" /> CALL
+                </a>
               </div>
               <Link href="/menu" className="hero-btn w-full">ORDER PICKUP</Link>
               <Link href="/menu" className="hero-btn w-full">ORDER DELIVERY</Link>
@@ -54,7 +59,9 @@ export default function HomePage() {
               <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight">
                 START YOUR ORDER
               </h1>
-              <Link href="/menu" className="hero-btn text-sm px-6">VIEW MENU 🍴</Link>
+              <Link href="/menu" className="hero-btn text-sm px-6 gap-2">
+                <FaUtensils className="text-xs" /> VIEW MENU
+              </Link>
             </div>
           </div>
 
@@ -69,7 +76,7 @@ export default function HomePage() {
                 href="/menu"
                 className="mt-3 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
               >
-                View Menu 🍴
+                <FaUtensils className="text-xs" /> View Menu
               </Link>
             </div>
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 bg-slate-700">
@@ -98,23 +105,31 @@ export default function HomePage() {
               href="tel:+15154902888"
               className="shrink-0 flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors whitespace-nowrap mt-1"
             >
-              Order Over Phone 📞
+              <FaPhone className="text-xs" /> Order Over Phone
             </a>
           </div>
 
           {/* Location card */}
-          <div className="info-card">
-            <div className="flex h-40">
+          <div className="info-card overflow-hidden">
+            {/* Map + food photo */}
+            <div className="flex h-48">
               <iframe
                 src="https://maps.google.com/maps?q=160+SE+Laurel+St+Waukee+IA+50263&output=embed&z=15"
                 className="flex-1 border-0 min-w-0"
                 loading="lazy"
                 title="Tsing Tsao Waukee location"
               />
-              <div className="relative w-36 shrink-0 bg-slate-700">
-                <Image src="/images/menu/orange_chicken.jpg" alt="Orange Chicken" fill className="object-cover" />
+              <div className="relative hidden sm:block sm:w-2/5 shrink-0 bg-slate-700">
+                <Image
+                  src="/images/menu/orange_chicken.jpg"
+                  alt="Orange Chicken"
+                  fill
+                  className="object-cover"
+                />
               </div>
             </div>
+
+            {/* Footer */}
             <div className="p-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-white">Visit Us</h3>
@@ -124,9 +139,10 @@ export default function HomePage() {
                 href="https://www.google.com/maps/place/Tsing+Tsao/@41.613174,-93.8794817,15z/data=!3m1!4b1!4m6!3m5!1s0x87ec2362e35497a1:0x569048ffc528c237!8m2!3d41.6131745!4d-93.8692034!16s%2Fg%2F1tf9ntn_?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDQwNy4wIKXMDSoASAFQAw%3D%3D"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+                className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
               >
-                Get Directions to Us 📍
+                <FaMapMarkerAlt className="text-brand-gold" />
+                Get Directions
               </a>
             </div>
           </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { FaShoppingBag } from 'react-icons/fa'
 import { useCart } from '@/context/CartContext'
 
 export default function NavBar() {
@@ -30,7 +31,7 @@ export default function NavBar() {
             href="/cart"
             className="ml-1 flex items-center gap-1.5 px-3.5 py-1.5 bg-brand-gold text-slate-900 text-sm font-bold rounded-full hover:bg-yellow-400 transition-colors"
           >
-            🛒 {count}
+            <FaShoppingBag className="text-xs" /> {count}
           </Link>
         )}
       </div>
