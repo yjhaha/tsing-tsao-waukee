@@ -44,12 +44,11 @@ export async function POST(req: NextRequest) {
       custom_fields: [
         {
           key: 'order_type',
-          label: { type: 'custom', custom: 'Pickup or Delivery?' },
+          label: { type: 'custom', custom: 'Order Type' },
           type: 'dropdown',
           dropdown: {
             options: [
               { label: 'Pickup', value: 'pickup' },
-              { label: 'Delivery', value: 'delivery' },
             ],
           },
         },
