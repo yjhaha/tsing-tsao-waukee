@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { FaSearchPlus, FaTimes, FaInfoCircle } from 'react-icons/fa'
 import { useCart } from '@/context/CartContext'
 
 export interface MenuItemSize {
@@ -20,6 +22,7 @@ export interface MenuItem {
   spicy?: boolean
   popular?: boolean
   serves?: string
+  loMeinChowMein?: boolean
 }
 
 export interface MenuCategory {
@@ -37,70 +40,198 @@ function fmt(price: number) {
   return `$${price.toFixed(2)}`
 }
 
-function MenuRow({ item, orderMode }: { item: MenuItem; orderMode: OrderMode }) {
-  const { addItem } = useCart()
-  const price = item.price ?? item.sizes?.[0]?.price ?? 0
-
-  function handleAdd() {
-    if (orderMode === 'delivery') {
-      window.location.href = DELIVERY_URL
-    } else {
-      addItem({ id: item.id, name: item.name, price, image: item.image })
+// ── Image lightbox ─────────────────────────────────────────────────────────────
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
     }
-  }
+    document.addEventListener('keydown', handleKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
 
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+        onClick={onClose}
+        aria-label="Close image"
+        type="button"
+      >
+        <FaTimes />
+      </button>
+      <div
+        className="relative max-w-2xl w-full max-h-[85vh]"
+        style={{ aspectRatio: '16/10' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-contain rounded-2xl"
+          sizes="(max-width: 768px) 100vw, 800px"
+        />
+      </div>
+      <p className="absolute bottom-6 text-white/60 text-sm">{alt}</p>
+    </div>,
+    document.body
+  )
+}
+
+// ── Noodle info tooltip ────────────────────────────────────────────────────────
+function NoodleInfo() {
+  const [open, setOpen] = useState(false)
   return (
-    <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl hover:bg-slate-700/60 transition-colors">
-      {/* Thumbnail */}
-      <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-700">
-        {item.image ? (
-          <Image src={item.image} alt={item.name} fill className="object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">🍽</div>
-        )}
-      </div>
-
-      {/* Name + description */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <h3 className="text-brand-gold font-semibold text-sm leading-snug">{item.name}</h3>
-          {item.spicy && <span className="text-[10px] text-red-400 leading-none">🌶</span>}
+    <div className="relative">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(v => !v)}
+        className="text-slate-500 hover:text-brand-gold transition-colors focus:outline-none"
+        aria-label="Noodle type information"
+      >
+        <FaInfoCircle className="text-sm" />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-slate-700 border border-slate-600 text-xs text-slate-200 rounded-xl p-3 z-50 shadow-xl pointer-events-none">
+          <div className="space-y-1">
+            <p><span className="text-white font-semibold">Lo Mein</span> — soft, chewy noodles</p>
+            <p><span className="text-white font-semibold">Chow Mein</span> — hard, crispy noodles</p>
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-700" />
         </div>
-        <p className="text-slate-400 text-xs leading-relaxed mt-0.5 line-clamp-2">{item.description}</p>
-        {item.serves && <p className="text-slate-500 text-[10px] mt-0.5">{item.serves}</p>}
-      </div>
-
-      {/* Price + add button */}
-      <div className="flex items-center gap-2.5 shrink-0">
-        <div className="text-right">
-          {item.price !== undefined ? (
-            <span className="text-white font-semibold text-sm tabular-nums">{fmt(item.price)}</span>
-          ) : item.sizes ? (
-            <div className="space-y-0.5">
-              {item.sizes.map(s => (
-                <div key={s.name} className="text-xs leading-tight">
-                  <span className="text-slate-400">{s.name} </span>
-                  <span className="text-white font-semibold tabular-nums">{fmt(s.price)}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <button
-          onClick={handleAdd}
-          className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-500 text-slate-300
-                     hover:border-brand-gold hover:text-brand-gold active:scale-90 transition-all duration-150
-                     text-lg font-light leading-none"
-          type="button"
-          aria-label={`Add ${item.name} to order`}
-        >
-          +
-        </button>
-      </div>
+      )}
     </div>
   )
 }
 
+// ── Size toggle ────────────────────────────────────────────────────────────────
+function SizeToggle({
+  sizes,
+  selectedIdx,
+  onChange,
+}: {
+  sizes: MenuItemSize[]
+  selectedIdx: number
+  onChange: (i: number) => void
+}) {
+  return (
+    <div className="flex rounded-lg bg-slate-700 p-0.5">
+      {sizes.map((size, i) => (
+        <button
+          key={size.name}
+          type="button"
+          onClick={() => onChange(i)}
+          className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all duration-150 leading-none ${
+            i === selectedIdx
+              ? 'bg-brand-gold text-slate-900'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          {size.name === 'Half' ? '½' : size.name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── Menu row ───────────────────────────────────────────────────────────────────
+function MenuRow({ item, orderMode }: { item: MenuItem; orderMode: OrderMode }) {
+  const { addItem } = useCart()
+  const [selectedSizeIdx, setSelectedSizeIdx] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+
+  const price = item.sizes ? item.sizes[selectedSizeIdx].price : (item.price ?? 0)
+
+  const handleAdd = useCallback(() => {
+    if (orderMode === 'delivery') {
+      window.location.href = DELIVERY_URL
+      return
+    }
+    const sizeName = item.sizes?.[selectedSizeIdx]?.name
+    const cartName = sizeName ? `${item.name} (${sizeName})` : item.name
+    const cartId = sizeName ? `${item.id}-${sizeName.toLowerCase()}` : item.id
+    addItem({ id: cartId, name: cartName, price, image: item.image })
+  }, [orderMode, item, selectedSizeIdx, price, addItem])
+
+  return (
+    <>
+      <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl hover:bg-slate-700/60 transition-colors">
+        {/* Thumbnail — expandable if image exists */}
+        <div
+          className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-700 ${item.image ? 'cursor-zoom-in group' : ''}`}
+          onClick={() => item.image && setLightboxOpen(true)}
+          role={item.image ? 'button' : undefined}
+          aria-label={item.image ? `View ${item.name} photo` : undefined}
+          tabIndex={item.image ? 0 : undefined}
+          onKeyDown={e => { if (e.key === 'Enter' && item.image) setLightboxOpen(true) }}
+        >
+          {item.image ? (
+            <>
+              <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" />
+              {/* Expand indicator */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                <FaSearchPlus className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow text-base" />
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">🍽</div>
+          )}
+        </div>
+
+        {/* Name + description */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h3 className="text-brand-gold font-semibold text-sm leading-snug">{item.name}</h3>
+            {item.spicy && <span className="text-[10px] text-red-400 leading-none">🌶</span>}
+            {item.loMeinChowMein && <NoodleInfo />}
+          </div>
+          <p className="text-slate-400 text-xs leading-relaxed mt-0.5 line-clamp-2">{item.description}</p>
+          {item.serves && <p className="text-slate-500 text-[10px] mt-0.5">{item.serves}</p>}
+        </div>
+
+        {/* Controls: size toggle + price + add */}
+        <div className="flex items-center gap-2 shrink-0">
+          {item.sizes && (
+            <div className="flex flex-col items-end gap-1">
+              <SizeToggle sizes={item.sizes} selectedIdx={selectedSizeIdx} onChange={setSelectedSizeIdx} />
+              <span className="text-white font-semibold text-sm tabular-nums">{fmt(price)}</span>
+            </div>
+          )}
+          {!item.sizes && item.price !== undefined && (
+            <span className="text-white font-semibold text-sm tabular-nums">{fmt(item.price)}</span>
+          )}
+          <button
+            onClick={handleAdd}
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-500 text-slate-300
+                       hover:border-brand-gold hover:text-brand-gold active:scale-90 transition-all duration-150
+                       text-lg font-light leading-none"
+            type="button"
+            aria-label={`Add ${item.name} to order`}
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {/* Lightbox portal */}
+      {lightboxOpen && item.image && (
+        <ImageLightbox src={item.image} alt={item.name} onClose={() => setLightboxOpen(false)} />
+      )}
+    </>
+  )
+}
+
+// ── Category section ───────────────────────────────────────────────────────────
 function CategorySection({ id, name, description, items, orderMode }: MenuCategory & { orderMode: OrderMode }) {
   return (
     <section id={id} className="scroll-mt-[104px]">
@@ -115,6 +246,7 @@ function CategorySection({ id, name, description, items, orderMode }: MenuCatego
   )
 }
 
+// ── Root component ─────────────────────────────────────────────────────────────
 export default function MenuList({ categories }: { categories: MenuCategory[] }) {
   const { count, total } = useCart()
   const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
