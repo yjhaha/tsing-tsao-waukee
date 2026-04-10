@@ -6,11 +6,41 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 
 const SLIDES = [
-  { id: 'app-2', name: 'Crab Rangoon',   price: 6.95,  image: '/images/menu/crab_rangoons.jpg' },
-  { id: 'app-1', name: 'Egg Rolls',      price: 3.95,  image: '/images/menu/egg_rolls.jpg'     },
-  { id: 'bf-2',  name: 'Mongolian Beef', price: 13.95, image: '/images/menu/mongolian_beef.jpg' },
-  { id: 'ch-3',  name: 'Orange Chicken', price: 12.95, image: '/images/menu/orange_chicken.jpg' },
-  { id: 'ch-2',  name: 'Sesame Chicken', price: 12.95, image: '/images/menu/sesame_chicken.jpg' },
+  {
+    id: 'app-2',
+    name: 'Crab Rangoon',
+    description: 'Crispy wonton shells filled with cream cheese and crab, served with sweet chili sauce',
+    price: 6.99,
+    image: '/images/menu/crab_rangoons.jpg',
+  },
+  {
+    id: 'app-1',
+    name: 'Egg Rolls',
+    description: 'Crispy golden rolls filled with seasoned pork and vegetables, served with sweet and sour sauce',
+    price: 3.99,
+    image: '/images/menu/egg_rolls.jpg',
+  },
+  {
+    id: 'bf-2',
+    name: 'Mongolian Beef',
+    description: 'Crispy sliced beef with scallions in a rich, slightly sweet hoisin sauce',
+    price: 10.99,
+    image: '/images/menu/mongolian_beef.jpg',
+  },
+  {
+    id: 'ch-3',
+    name: 'Orange Chicken',
+    description: 'Crispy chicken tossed in a tangy orange glaze, sweet and just a hint of heat',
+    price: 10.99,
+    image: '/images/menu/orange_chicken.jpg',
+  },
+  {
+    id: 'ch-2',
+    name: 'Sesame Chicken',
+    description: 'Golden crispy chicken glazed in a sweet sesame sauce, garnished with sesame seeds',
+    price: 10.99,
+    image: '/images/menu/sesame_chicken.jpg',
+  },
 ]
 
 export default function MostOrderedCarousel() {
@@ -20,7 +50,6 @@ export default function MostOrderedCarousel() {
 
   const prev = () => setIndex(i => (i - 1 + SLIDES.length) % SLIDES.length)
   const next = () => setIndex(i => (i + 1) % SLIDES.length)
-
   const slide = SLIDES[index]
 
   function handleAdd() {
@@ -29,58 +58,63 @@ export default function MostOrderedCarousel() {
   }
 
   return (
-    <div className="info-card overflow-hidden">
-      {/* Slide */}
-      <div className="relative h-56 sm:h-64 bg-slate-800 select-none">
+    <div className="bg-slate-800 rounded-2xl overflow-hidden select-none">
+      {/* Photo */}
+      <div
+        className="relative w-full cursor-pointer"
+        style={{ aspectRatio: '4/3' }}
+        onClick={next}
+      >
         <Image
           key={slide.image}
           src={slide.image}
           alt={slide.name}
           fill
-          className="object-cover"
+          className="object-cover transition-opacity duration-300"
           priority
+          sizes="(max-width: 1024px) 100vw, 50vw"
         />
-
-        {/* Dish name label — top left */}
-        <div className="absolute top-3 left-3">
-          <span className="flex items-center gap-2 py-1.5 px-3 text-xs font-semibold text-white bg-black/50 backdrop-blur-sm border border-white/25 rounded-lg">
-            {slide.name}
-          </span>
-        </div>
-
-        {/* Add to cart — top right */}
+        {/* Subtle left/right tap zones */}
         <button
-          onClick={handleAdd}
-          type="button"
-          aria-label={`Add ${slide.name} to order`}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/25 text-white hover:bg-brand-gold hover:border-brand-gold hover:text-slate-900 active:scale-90 transition-all duration-150 text-lg font-light leading-none"
-        >
-          +
-        </button>
-
-        {/* Left arrow */}
-        <button
-          onClick={prev}
+          onClick={e => { e.stopPropagation(); prev() }}
           type="button"
           aria-label="Previous"
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/25 text-white hover:bg-black/70 active:scale-90 transition-all"
-        >
-          ‹
-        </button>
-
-        {/* Right arrow */}
+          className="absolute left-0 top-0 h-full w-1/4 opacity-0"
+        />
         <button
-          onClick={next}
+          onClick={e => { e.stopPropagation(); next() }}
           type="button"
           aria-label="Next"
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/25 text-white hover:bg-black/70 active:scale-90 transition-all"
-        >
-          ›
-        </button>
+          className="absolute right-0 top-0 h-full w-1/4 opacity-0"
+        />
+      </div>
+
+      {/* Info panel */}
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-white font-bold text-lg leading-snug">{slide.name}</h3>
+            <p className="text-slate-400 text-sm mt-1 leading-relaxed line-clamp-2">{slide.description}</p>
+          </div>
+          {/* Price + add */}
+          <div className="flex items-center gap-2 shrink-0 mt-0.5">
+            <div className="bg-slate-700 rounded-xl px-3 py-2 text-white font-bold text-base tabular-nums">
+              ${slide.price.toFixed(2)}
+            </div>
+            <button
+              onClick={handleAdd}
+              type="button"
+              aria-label={`Add ${slide.name} to order`}
+              className="bg-slate-700 hover:bg-brand-gold hover:text-slate-900 text-white rounded-xl w-11 h-11 flex items-center justify-center text-2xl font-light transition-colors duration-150 active:scale-95"
+            >
+              +
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Dots */}
-      <div className="flex items-center justify-center gap-1.5 py-3">
+      <div className="flex items-center justify-center gap-2 pb-3.5">
         {SLIDES.map((_, i) => (
           <button
             key={i}
@@ -89,8 +123,8 @@ export default function MostOrderedCarousel() {
             aria-label={`Go to slide ${i + 1}`}
             className={`rounded-full transition-all duration-200 ${
               i === index
-                ? 'w-5 h-1.5 bg-brand-gold'
-                : 'w-1.5 h-1.5 bg-slate-600 hover:bg-slate-400'
+                ? 'w-6 h-2 bg-white'
+                : 'w-2 h-2 bg-slate-600 hover:bg-slate-400'
             }`}
           />
         ))}

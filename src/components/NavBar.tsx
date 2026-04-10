@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { FaShoppingBag } from 'react-icons/fa'
 import { useCart } from '@/context/CartContext'
@@ -11,8 +12,15 @@ export default function NavBar() {
 
   return (
     <nav className="fixed top-0 inset-x-0 z-50 h-14 flex items-center justify-between px-5 bg-slate-900/95 backdrop-blur border-b border-slate-700/50">
-      <Link href="/" className="font-condensed text-3xl text-brand-gold tracking-wider leading-none">
-        TSING TSAO
+      <Link href="/" className="flex items-center leading-none">
+        <Image
+          src="/images/tsing-tsao-logo.png"
+          alt="Tsing Tsao"
+          width={160}
+          height={36}
+          className="object-contain h-8 w-auto"
+          priority
+        />
       </Link>
 
       <div className="flex items-center gap-2">
