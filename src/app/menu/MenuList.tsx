@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useSearchParams } from 'next/navigation'
 import { FaSearchPlus, FaTimes, FaInfoCircle, FaFire } from 'react-icons/fa'
 import { useCart } from '@/context/CartContext'
 
@@ -266,39 +267,65 @@ function CategorySection({ id, name, description, items, orderMode }: MenuCatego
 // ── Root component ──────────────────────────────────────────────────────────
 export default function MenuList({ categories }: { categories: MenuCategory[] }) {
   const { count, total } = useCart()
+  const searchParams = useSearchParams()
   const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
+
+  // Honour ?mode=delivery from landing page ORDER DELIVERY button
+  useEffect(() => {
+    const mode = searchParams.get('mode')
+    if (mode === 'delivery') setOrderMode('delivery')
+    else if (mode === 'pickup') setOrderMode('pickup')
+  }, [searchParams])
 
   const mostOrdered = categories.flatMap(c => c.items).filter(i => i.popular)
 
   return (
     <div>
-      {/* Pickup / Delivery toggle */}
-      <div className="sticky top-14 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-700/60 px-4 py-2.5">
-        <div className="flex rounded-xl bg-slate-800 p-1 max-w-xs">
-          <button
-            type="button"
-            onClick={() => setOrderMode('pickup')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-              orderMode === 'pickup' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Pickup
-          </button>
-          <button
-            type="button"
-            onClick={() => setOrderMode('delivery')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
-              orderMode === 'delivery' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Delivery
-          </button>
+      {/* ── Sticky header: Pickup/Delivery toggle (top) then category nav ── */}
+      <div className="sticky top-14 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-700/60">
+        {/* Pickup / Delivery toggle */}
+        <div className="px-4 pt-2.5 pb-2">
+          <div className="flex rounded-xl bg-slate-800 p-1 max-w-xs">
+            <button
+              type="button"
+              onClick={() => setOrderMode('pickup')}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+                orderMode === 'pickup' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Pickup
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderMode('delivery')}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+                orderMode === 'delivery' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Delivery
+            </button>
+          </div>
+          {orderMode === 'delivery' && (
+            <p className="text-slate-500 text-xs mt-1.5 ml-1">
+              Tap any item to continue on our delivery partner&apos;s site.
+            </p>
+          )}
         </div>
-        {orderMode === 'delivery' && (
-          <p className="text-slate-500 text-xs mt-1.5 ml-1">
-            Tap any item to continue on our delivery partner&apos;s site.
-          </p>
-        )}
+
+        {/* Category nav */}
+        <nav className="border-t border-slate-700/40 px-4">
+          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-none">
+            {categories.map(cat => (
+              <a
+                key={cat.id}
+                href={`#${cat.id}`}
+                className="shrink-0 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-lg transition-colors whitespace-nowrap"
+              >
+                {cat.name}
+              </a>
+            ))}
+          </div>
+        </nav>
       </div>
 
       <div className="p-4 space-y-8 pb-28">

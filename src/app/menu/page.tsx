@@ -25,13 +25,22 @@ export default function MenuPage() {
         <aside className="hidden lg:block lg:w-1/2 sticky top-14 h-[calc(100vh-3.5rem)]">
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 bg-slate-950">
             {COLLAGE.map(({ src, alt }) => (
-              <div key={src} className="relative overflow-hidden">
-                <Image src={src} alt={alt} fill className="object-cover" />
+              <div key={src} className="relative overflow-hidden group cursor-pointer">
+                <Image src={src} alt={alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                {/* Hover label */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
+                <div className="absolute bottom-2 left-2 right-2 flex justify-center pointer-events-none">
+                  <span className="translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300
+                                   py-1 px-2.5 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg
+                                   text-white text-xs font-medium whitespace-nowrap">
+                    {alt}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/20" />
-          <div className="relative h-full flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/20 pointer-events-none" />
+          <div className="relative h-full flex items-center justify-center pointer-events-none">
             <h1 className="font-display italic font-bold text-6xl xl:text-7xl text-white drop-shadow-lg tracking-wide">
               OUR MENU
             </h1>
@@ -45,21 +54,7 @@ export default function MenuPage() {
             <h1 className="font-display italic font-bold text-3xl text-white">Our Menu</h1>
           </div>
 
-          {/* Sticky category nav */}
-          <nav className="sticky top-14 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-700/50 px-4">
-            <div className="flex gap-1 overflow-x-auto py-2.5 scrollbar-none">
-              {categories.map(cat => (
-                <a
-                  key={cat.id}
-                  href={`#${cat.id}`}
-                  className="shrink-0 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-lg transition-colors whitespace-nowrap"
-                >
-                  {cat.name}
-                </a>
-              ))}
-            </div>
-          </nav>
-
+          {/* MenuList owns both the Pickup/Delivery toggle (top) and the category nav (below it) */}
           <MenuList categories={categories} />
         </div>
       </div>

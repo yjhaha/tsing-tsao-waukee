@@ -113,21 +113,39 @@ export default function MostOrderedCarousel() {
         </div>
       </div>
 
-      {/* Dots */}
-      <div className="flex items-center justify-center gap-2 pb-3.5">
-        {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setIndex(i)}
-            type="button"
-            aria-label={`Go to slide ${i + 1}`}
-            className={`rounded-full transition-all duration-200 ${
-              i === index
-                ? 'w-6 h-2 bg-white'
-                : 'w-2 h-2 bg-slate-600 hover:bg-slate-400'
-            }`}
-          />
-        ))}
+      {/* Arrows + Dots row */}
+      <div className="flex items-center justify-center gap-3 pb-3.5">
+        <button
+          onClick={prev}
+          type="button"
+          aria-label="Previous"
+          className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-white text-lg leading-none active:scale-90 transition-all shrink-0"
+        >
+          ‹
+        </button>
+        <div className="flex items-center gap-2">
+          {SLIDES.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIndex(i)}
+              type="button"
+              aria-label={`Go to slide ${i + 1}`}
+              className={`rounded-full transition-all duration-200 ${
+                i === index
+                  ? 'w-6 h-2 bg-white'
+                  : 'w-2 h-2 bg-slate-600 hover:bg-slate-400'
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          onClick={next}
+          type="button"
+          aria-label="Next"
+          className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-700 hover:bg-slate-600 text-white text-lg leading-none active:scale-90 transition-all shrink-0"
+        >
+          ›
+        </button>
       </div>
     </div>
   )

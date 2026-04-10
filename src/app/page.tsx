@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import MostOrderedCarousel from '@/components/MostOrderedCarousel'
+import OpenStatus from '@/components/OpenStatus'
 import { FaUtensils, FaPhone, FaMapMarkerAlt } from 'react-icons/fa'
 
 const COLLAGE = [
@@ -21,22 +22,31 @@ export default function HomePage() {
       <div className="lg:flex min-h-screen pt-14">
         {/* ── Left sticky panel ── */}
         <aside className="hidden lg:block lg:w-1/2 sticky top-14 h-[calc(100vh-3.5rem)]">
-          {/* Photo collage */}
+          {/* Photo collage — each cell has a hover label */}
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 bg-slate-950">
             {COLLAGE.map(({ src, alt }) => (
-              <div key={src} className="relative overflow-hidden">
-                <Image src={src} alt={alt} fill className="object-cover" />
+              <div key={src} className="relative overflow-hidden group cursor-pointer">
+                <Image src={src} alt={alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                {/* Hover label */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
+                <div className="absolute bottom-2 left-2 right-2 flex justify-center pointer-events-none">
+                  <span className="translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300
+                                   py-1 px-2.5 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg
+                                   text-white text-xs font-medium whitespace-nowrap">
+                    {alt}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
           {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-slate-950/20 pointer-events-none" />
           {/* CTA content */}
-          <div className="relative h-full flex flex-col items-center justify-center gap-3 px-12 text-center">
+          <div className="relative h-full flex flex-col items-center justify-center gap-3 px-12 text-center pointer-events-none">
             <h1 className="font-display italic font-bold text-5xl xl:text-6xl text-white leading-tight drop-shadow-lg mb-4">
               START YOUR<br />ORDER
             </h1>
-            <div className="w-full max-w-xs space-y-2">
+            <div className="w-full max-w-xs space-y-2 pointer-events-auto">
               <div className="grid grid-cols-2 gap-2">
                 <Link href="/menu" className="hero-btn gap-2">
                   <FaUtensils className="text-xs" /> VIEW MENU
@@ -45,8 +55,8 @@ export default function HomePage() {
                   <FaPhone className="text-xs" /> CALL
                 </a>
               </div>
-              <Link href="/menu" className="hero-btn w-full">ORDER PICKUP</Link>
-              <Link href="/menu" className="hero-btn w-full">ORDER DELIVERY</Link>
+              <Link href="/menu?mode=pickup" className="hero-btn w-full">ORDER PICKUP</Link>
+              <Link href="/menu?mode=delivery" className="hero-btn w-full">ORDER DELIVERY</Link>
             </div>
           </div>
         </aside>
@@ -86,9 +96,12 @@ export default function HomePage() {
           </div>
 
           {/* Hours card */}
-          <div className="info-card p-5 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-display text-xl text-white mb-3">Our Hours</h2>
+          <div className="info-card p-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="font-display text-xl text-white">Our Hours</h2>
+              <OpenStatus />
+            </div>
+            <div className="flex items-start justify-between gap-4">
               <dl className="space-y-1.5 text-sm">
                 {[
                   ['Monday – Thursday:', '11:00 AM – 9:00 PM'],
@@ -101,35 +114,33 @@ export default function HomePage() {
                   </div>
                 ))}
               </dl>
+              <a
+                href="tel:+15154902888"
+                className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
+              >
+                <FaPhone className="text-xs text-brand-gold" /> Order Over Phone
+              </a>
             </div>
-            <a
-              href="tel:+15154902888"
-              className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
-            >
-              <FaPhone className="text-xs text-brand-gold" /> Order Over Phone
-            </a>
           </div>
 
           {/* Location card */}
           <div className="info-card overflow-hidden">
-            {/* Map full-width */}
+            {/* Map pinned to Tsing Tsao Waukee */}
             <div className="h-48">
               <iframe
-                src="https://maps.google.com/maps?q=160+SE+Laurel+St+Waukee+IA+50263&output=embed&z=15"
+                src="https://maps.google.com/maps?q=41.6131745,-93.8692034&output=embed&z=17"
                 className="w-full h-full border-0"
                 loading="lazy"
                 title="Tsing Tsao Waukee location"
               />
             </div>
-
-            {/* Footer */}
             <div className="p-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="font-display text-white">Visit Us</h3>
+                <h3 className="font-display text-xl text-white">Visit Us</h3>
                 <p className="text-slate-400 text-xs mt-0.5">160 SE Laurel St, Waukee, IA 50263</p>
               </div>
               <a
-                href="https://www.google.com/maps/place/Tsing+Tsao/@41.613174,-93.8794817,15z/data=!3m1!4b1!4m6!3m5!1s0x87ec2362e35497a1:0x569048ffc528c237!8m2!3d41.6131745!4d-93.8692034!16s%2Fg%2F1tf9ntn_?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDQwNy4wIKXMDSoASAFQAw%3D%3D"
+                href="https://www.google.com/maps/place/Tsing+Tsao/@41.613174,-93.8794817,15z/data=!3m1!4b1!4m6!3m5!1s0x87ec2362e35497a1:0x569048ffc528c237!8m2!3d41.6131745!4d-93.8692034!16s%2Fg%2F1tf9ntn_?hl=en-US&entry=ttu"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
@@ -177,33 +188,25 @@ export default function HomePage() {
             </a>
           </div>
 
-          {/* Available On card */}
+          {/* Available On card — use <img> tags so SVG/PNG both render reliably */}
           <div className="info-card p-5">
             <h2 className="font-display text-xl text-white mb-4">Available On</h2>
             <div className="grid grid-cols-2 gap-3">
-              <a
-                href="#"
-                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
-              >
-                <Image src="/images/logos/doordash.svg" alt="DoorDash" width={160} height={40} className="object-contain" />
+              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/logos/doordash.png" alt="DoorDash" className="h-8 w-auto object-contain" />
               </a>
-              <a
-                href="#"
-                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
-              >
-                <Image src="/images/logos/grubhub.svg" alt="Grubhub" width={160} height={40} className="object-contain" />
+              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/logos/grubhub.svg" alt="Grubhub" className="h-8 w-auto object-contain" />
               </a>
-              <a
-                href="#"
-                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
-              >
-                <Image src="/images/logos/ubereats.svg" alt="Uber Eats" width={160} height={40} className="object-contain" />
+              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/logos/ubereats.png" alt="Uber Eats" className="h-8 w-auto object-contain" />
               </a>
-              <a
-                href="#"
-                className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors"
-              >
-                <Image src="/images/logos/eatfuti.svg" alt="EatFuti" width={160} height={40} className="object-contain" />
+              <a href="#" className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/logos/eatfuti.png" alt="EatFuti" className="h-8 w-auto object-contain" />
               </a>
             </div>
           </div>
