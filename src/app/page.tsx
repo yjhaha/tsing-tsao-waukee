@@ -22,20 +22,11 @@ export default function HomePage() {
       <div className="lg:flex min-h-screen pt-14">
         {/* ── Left sticky panel ── */}
         <aside className="hidden lg:block lg:w-1/2 sticky top-14 h-[calc(100vh-3.5rem)]">
-          {/* Photo collage — each cell has a hover label */}
+          {/* Photo collage */}
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 bg-slate-950">
             {COLLAGE.map(({ src, alt }) => (
-              <div key={src} className="relative overflow-hidden group cursor-pointer">
-                <Image src={src} alt={alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
-                {/* Hover label */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
-                <div className="absolute bottom-2 left-2 right-2 flex justify-center pointer-events-none">
-                  <span className="translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300
-                                   py-1 px-2.5 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg
-                                   text-white text-xs font-medium whitespace-nowrap">
-                    {alt}
-                  </span>
-                </div>
+              <div key={src} className="relative overflow-hidden">
+                <Image src={src} alt={alt} fill className="object-cover" />
               </div>
             ))}
           </div>
@@ -64,15 +55,27 @@ export default function HomePage() {
         {/* ── Right scrollable panel ── */}
         <main className="w-full lg:w-1/2 min-h-screen p-4 space-y-3">
           {/* Mobile hero */}
-          <div className="lg:hidden relative h-52 rounded-2xl overflow-hidden mb-2">
-            <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" />
-            <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-3 px-6">
-              <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight">
-                START YOUR ORDER
-              </h1>
-              <Link href="/menu" className="hero-btn text-sm px-6 gap-2">
-                <FaUtensils className="text-xs" /> VIEW MENU
-              </Link>
+          <div className="lg:hidden relative rounded-2xl overflow-hidden mb-2">
+            <div className="relative h-52">
+              <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" />
+              <div className="absolute inset-0 bg-black/60" />
+              <div className="relative h-full flex flex-col items-center justify-center px-5">
+                <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-4">
+                  START YOUR ORDER
+                </h1>
+                <div className="w-full max-w-xs space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link href="/menu" className="hero-btn gap-2 text-sm">
+                      <FaUtensils className="text-xs" /> VIEW MENU
+                    </Link>
+                    <a href="tel:+15154902888" className="hero-btn gap-2 text-sm">
+                      <FaPhone className="text-xs" /> CALL
+                    </a>
+                  </div>
+                  <Link href="/menu?mode=pickup" className="hero-btn w-full text-sm">ORDER PICKUP</Link>
+                  <Link href="/menu?mode=delivery" className="hero-btn w-full text-sm">ORDER DELIVERY</Link>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -188,25 +191,29 @@ export default function HomePage() {
             </a>
           </div>
 
-          {/* Available On card — use <img> tags so SVG/PNG both render reliably */}
+          {/* Available On card */}
           <div className="info-card p-5">
             <h2 className="font-display text-xl text-white mb-4">Available On</h2>
             <div className="grid grid-cols-2 gap-3">
-              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+              <a href="https://order.online/store/tsing-tsao-waukee-32583501/?delivery=true" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/doordash.png" alt="DoorDash" className="h-8 w-auto object-contain" />
+                <img src="/images/logos/doordash.png" alt="DoorDash" className="h-10 w-auto object-contain" />
               </a>
-              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+              <a href="https://www.grubhub.com/restaurant/tsing-tsao-160-se-laurel-st-waukee/2534918" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/grubhub.svg" alt="Grubhub" className="h-8 w-auto object-contain" />
+                <img src="/images/logos/grubhub.svg" alt="Grubhub" className="h-10 w-auto object-contain" />
               </a>
-              <a href="#" className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+              <a href="https://www.ubereats.com/store/tsing-tsao-waukees/OdKVOdx6WcmTv6KFtJK9tw?srsltid=AfmBOoqWNo_U6PtCVDGiDSSJ7w2SmUNyeSospZxA6TISqaR0JEJ9KH1C" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/ubereats.png" alt="Uber Eats" className="h-8 w-auto object-contain" />
+                <img src="/images/logos/ubereats.png" alt="Uber Eats" className="h-10 w-auto object-contain" />
               </a>
-              <a href="#" className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors">
+              <a href="https://eatfuticonnect.com/restaurants/detail/456" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/eatfuti.png" alt="EatFuti" className="h-8 w-auto object-contain" />
+                <img src="/images/logos/eatfuti.png" alt="EatFuti" className="h-10 w-auto object-contain" />
               </a>
             </div>
           </div>
