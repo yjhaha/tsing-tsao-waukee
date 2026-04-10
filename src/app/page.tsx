@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
+import MostOrderedCarousel from '@/components/MostOrderedCarousel'
 import { FaUtensils, FaPhone, FaMapMarkerAlt } from 'react-icons/fa'
 
 const COLLAGE = [
@@ -74,9 +75,9 @@ export default function HomePage() {
               </p>
               <Link
                 href="/menu"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+                className="mt-3 inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
               >
-                <FaUtensils className="text-xs" /> View Menu
+                <FaUtensils className="text-xs text-brand-gold" /> View Menu
               </Link>
             </div>
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 bg-slate-700">
@@ -103,30 +104,22 @@ export default function HomePage() {
             </div>
             <a
               href="tel:+15154902888"
-              className="shrink-0 flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors whitespace-nowrap mt-1"
+              className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
             >
-              <FaPhone className="text-xs" /> Order Over Phone
+              <FaPhone className="text-xs text-brand-gold" /> Order Over Phone
             </a>
           </div>
 
           {/* Location card */}
           <div className="info-card overflow-hidden">
-            {/* Map + food photo */}
-            <div className="flex h-48">
+            {/* Map full-width */}
+            <div className="h-48">
               <iframe
                 src="https://maps.google.com/maps?q=160+SE+Laurel+St+Waukee+IA+50263&output=embed&z=15"
-                className="flex-1 border-0 min-w-0"
+                className="w-full h-full border-0"
                 loading="lazy"
                 title="Tsing Tsao Waukee location"
               />
-              <div className="relative hidden sm:block sm:w-2/5 shrink-0 bg-slate-700">
-                <Image
-                  src="/images/menu/orange_chicken.jpg"
-                  alt="Orange Chicken"
-                  fill
-                  className="object-cover"
-                />
-              </div>
             </div>
 
             {/* Footer */}
@@ -145,6 +138,12 @@ export default function HomePage() {
                 Get Directions
               </a>
             </div>
+          </div>
+
+          {/* Most Ordered carousel */}
+          <div>
+            <h2 className="font-display text-xl text-white mb-2 px-1">Most Ordered</h2>
+            <MostOrderedCarousel />
           </div>
 
           {/* Review card */}
