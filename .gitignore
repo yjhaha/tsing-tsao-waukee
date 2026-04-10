@@ -15,5 +15,8 @@ out/
 *.pem
 npm-debug.log*
 
+# TypeScript
+tsconfig.tsbuildinfo
+
 # Vercel
 .vercel
