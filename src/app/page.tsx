@@ -56,11 +56,11 @@ export default function HomePage() {
         <main className="w-full lg:w-1/2 min-h-screen p-4 space-y-3">
           {/* Mobile hero */}
           <div className="lg:hidden relative rounded-2xl overflow-hidden mb-2">
-            <div className="relative h-52">
-              <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" />
+            <div className="relative">
+              <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" width={800} height={500} className="object-cover w-full" />
               <div className="absolute inset-0 bg-black/60" />
-              <div className="relative h-full flex flex-col items-center justify-center px-5">
-                <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-4">
+              <div className="relative flex flex-col items-center px-5 py-8">
+                <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-6">
                   START YOUR ORDER
                 </h1>
                 <div className="w-full max-w-xs space-y-2">
@@ -75,6 +75,7 @@ export default function HomePage() {
                   <Link href="/menu?mode=pickup" className="hero-btn w-full text-sm">ORDER PICKUP</Link>
                   <Link href="/menu?mode=delivery" className="hero-btn w-full text-sm">ORDER DELIVERY</Link>
                 </div>
+                <div className="pb-2" />
               </div>
             </div>
           </div>
