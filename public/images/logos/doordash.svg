@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 80" fill="none">
+  <!-- D-wing icon -->
+  <path d="M10 14 L22 14 L22 20 L16 20 L16 60 L22 60 L22 66 L10 66 Z" fill="#FF3008"/>
+  <!-- Wing/chevron -->
+  <path d="M6 14 L22 14 L22 20 L10 20 L10 26 L6 26 Z" fill="#FF3008"/>
+  <!-- D curve -->
+  <path d="M16 14 L28 14 Q52 14 52 40 Q52 66 28 66 L16 66 L16 60 L26 60 Q42 60 42 40 Q42 20 26 20 L16 20 Z" fill="#FF3008"/>
+  <!-- DOORDASH text -->
+  <text x="64" y="52" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="28" fill="#FF3008" letter-spacing="-0.5">DOORDASH</text>
+</svg>

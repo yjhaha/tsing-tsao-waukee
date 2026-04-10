@@ -165,48 +165,46 @@ export default function HomePage() {
               href="https://g.page/r/REPLACE_WITH_GOOGLE_PLACE_ID/review"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-white rounded-xl p-2.5 shrink-0 hover:opacity-90 transition-opacity"
+              className="bg-white rounded-xl p-1.5 shrink-0 hover:opacity-90 transition-opacity"
               title="Scan to leave a Google Review"
             >
-              {/* Replace src with actual QR code image once generated */}
-              <div className="w-20 h-20 bg-slate-100 flex flex-col items-center justify-center rounded gap-1.5">
-                <div className="grid grid-cols-3 gap-0.5">
-                  {[1,0,1, 0,1,0, 1,0,1].map((filled, i) => (
-                    <div key={i} className={`w-5 h-5 rounded-sm ${filled ? 'bg-slate-800' : 'bg-slate-200'}`} />
-                  ))}
-                </div>
-                <p className="text-[9px] text-slate-500 font-bold tracking-widest">SCAN ME</p>
-              </div>
+              <Image
+                src="/images/qr-google-review.png"
+                alt="Scan to leave a Google Review"
+                width={96}
+                height={96}
+                className="rounded-lg"
+              />
             </a>
           </div>
 
           {/* Available On card */}
           <div className="info-card p-5">
             <h2 className="font-display text-xl text-white mb-4">Available On</h2>
-            <div className="flex flex-wrap gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
               <a
                 href="#"
-                className="px-4 py-2.5 bg-[#FF3008] text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
               >
-                DoorDash
+                <Image src="/images/logos/doordash.svg" alt="DoorDash" width={160} height={40} className="object-contain" />
               </a>
               <a
                 href="#"
-                className="px-4 py-2.5 bg-[#F63440] text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
               >
-                GrubHub
+                <Image src="/images/logos/grubhub.svg" alt="Grubhub" width={160} height={40} className="object-contain" />
               </a>
               <a
                 href="#"
-                className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold border border-slate-600 hover:border-slate-400 transition-colors"
+                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity"
               >
-                Uber Eats
+                <Image src="/images/logos/ubereats.svg" alt="Uber Eats" width={160} height={40} className="object-contain" />
               </a>
               <a
                 href="#"
-                className="px-4 py-2.5 bg-[#00B67A] text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors"
               >
-                EatFuti
+                <Image src="/images/logos/eatfuti.svg" alt="EatFuti" width={160} height={40} className="object-contain" />
               </a>
             </div>
           </div>

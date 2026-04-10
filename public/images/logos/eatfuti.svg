@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80" fill="none">
+  <!-- Black circle -->
+  <circle cx="40" cy="40" r="38" fill="#000000"/>
+  <!-- Banana shape -->
+  <path d="M24 48 Q26 28 44 24 Q52 22 54 28 Q52 26 44 30 Q30 36 28 50 Z" fill="#FFD700"/>
+  <path d="M28 50 Q30 36 44 30 Q52 26 54 28 Q56 34 50 42 Q42 52 28 50 Z" fill="#FFC200"/>
+  <!-- Stem -->
+  <path d="M44 24 Q46 18 50 20 Q48 22 44 26 Z" fill="#7A5C00"/>
+  <!-- EatFuti text -->
+  <text x="88" y="36" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="22" fill="#000000">EatFuti</text>
+  <!-- PASSPORT badge -->
+  <rect x="88" y="46" width="96" height="22" rx="5" fill="#4338CA"/>
+  <text x="136" y="62" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="13" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">PASSPORT</text>
+</svg>
