@@ -106,7 +106,7 @@ export default function HomePage() {
           <div className="info-card">
             <div className="flex h-40">
               <iframe
-                src="https://maps.google.com/maps?q=950+SE+University+Ave+Waukee+IA+50263&output=embed&z=15"
+                src="https://maps.google.com/maps?q=160+SE+Laurel+St+Waukee+IA+50263&output=embed&z=15"
                 className="flex-1 border-0 min-w-0"
                 loading="lazy"
                 title="Tsing Tsao Waukee location"
@@ -118,10 +118,10 @@ export default function HomePage() {
             <div className="p-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="font-display text-white">Visit Us</h3>
-                <p className="text-slate-400 text-xs mt-0.5">950 SE University Ave, Waukee, IA 50263</p>
+                <p className="text-slate-400 text-xs mt-0.5">160 SE Laurel St, Waukee, IA 50263</p>
               </div>
               <a
-                href="https://maps.google.com/?q=950+SE+University+Ave,+Waukee,+IA+50263"
+                href="https://www.google.com/maps/place/Tsing+Tsao/@41.613174,-93.8794817,15z/data=!3m1!4b1!4m6!3m5!1s0x87ec2362e35497a1:0x569048ffc528c237!8m2!3d41.6131745!4d-93.8692034!16s%2Fg%2F1tf9ntn_?hl=en-US&entry=ttu&g_ep=EgoyMDI2MDQwNy4wIKXMDSoASAFQAw%3D%3D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="shrink-0 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1"

@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
 
 export interface MenuItemSize {
@@ -28,13 +29,25 @@ export interface MenuCategory {
   items: MenuItem[]
 }
 
+const DELIVERY_URL = 'https://order.online/store/tsing-tsao-waukee-32583501/?delivery=true'
+
+type OrderMode = 'pickup' | 'delivery'
+
 function fmt(price: number) {
   return `$${price.toFixed(2)}`
 }
 
-function MenuRow({ item }: { item: MenuItem }) {
+function MenuRow({ item, orderMode }: { item: MenuItem; orderMode: OrderMode }) {
   const { addItem } = useCart()
   const price = item.price ?? item.sizes?.[0]?.price ?? 0
+
+  function handleAdd() {
+    if (orderMode === 'delivery') {
+      window.location.href = DELIVERY_URL
+    } else {
+      addItem({ id: item.id, name: item.name, price, image: item.image })
+    }
+  }
 
   return (
     <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl hover:bg-slate-700/60 transition-colors">
@@ -74,7 +87,7 @@ function MenuRow({ item }: { item: MenuItem }) {
           ) : null}
         </div>
         <button
-          onClick={() => addItem({ id: item.id, name: item.name, price, image: item.image })}
+          onClick={handleAdd}
           className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-500 text-slate-300
                      hover:border-brand-gold hover:text-brand-gold active:scale-90 transition-all duration-150
                      text-lg font-light leading-none"
@@ -88,7 +101,7 @@ function MenuRow({ item }: { item: MenuItem }) {
   )
 }
 
-function CategorySection({ id, name, description, items }: MenuCategory) {
+function CategorySection({ id, name, description, items, orderMode }: MenuCategory & { orderMode: OrderMode }) {
   return (
     <section id={id} className="scroll-mt-[104px]">
       <div className="mb-3">
@@ -96,7 +109,7 @@ function CategorySection({ id, name, description, items }: MenuCategory) {
         {description && <p className="text-slate-500 text-xs mt-0.5">{description}</p>}
       </div>
       <div className="space-y-2">
-        {items.map(item => <MenuRow key={item.id} item={item} />)}
+        {items.map(item => <MenuRow key={item.id} item={item} orderMode={orderMode} />)}
       </div>
     </section>
   )
@@ -104,11 +117,45 @@ function CategorySection({ id, name, description, items }: MenuCategory) {
 
 export default function MenuList({ categories }: { categories: MenuCategory[] }) {
   const { count, total } = useCart()
+  const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
 
   const mostOrdered = categories.flatMap(c => c.items).filter(i => i.popular)
 
   return (
     <div>
+      {/* Pickup / Delivery toggle */}
+      <div className="sticky top-14 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-700/60 px-4 py-2.5">
+        <div className="flex rounded-xl bg-slate-800 p-1 max-w-xs">
+          <button
+            type="button"
+            onClick={() => setOrderMode('pickup')}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+              orderMode === 'pickup'
+                ? 'bg-brand-gold text-slate-900 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Pickup
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrderMode('delivery')}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-150 ${
+              orderMode === 'delivery'
+                ? 'bg-brand-gold text-slate-900 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Delivery
+          </button>
+        </div>
+        {orderMode === 'delivery' && (
+          <p className="text-slate-500 text-xs mt-1.5 ml-1">
+            Tap any item to continue on our delivery partner&apos;s site.
+          </p>
+        )}
+      </div>
+
       <div className="p-4 space-y-8 pb-28">
         {/* Most Ordered virtual section */}
         {mostOrdered.length > 0 && (
@@ -121,7 +168,7 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
             </div>
             <div className="space-y-2">
               {mostOrdered.map(item => (
-                <MenuRow key={`popular-${item.id}`} item={item} />
+                <MenuRow key={`popular-${item.id}`} item={item} orderMode={orderMode} />
               ))}
             </div>
           </section>
@@ -129,12 +176,12 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
 
         {/* All categories */}
         {categories.map(cat => (
-          <CategorySection key={cat.id} {...cat} />
+          <CategorySection key={cat.id} {...cat} orderMode={orderMode} />
         ))}
       </div>
 
-      {/* Floating cart bar */}
-      {count > 0 && (
+      {/* Floating cart bar — only visible in pickup mode */}
+      {orderMode === 'pickup' && count > 0 && (
         <div className="fixed bottom-0 left-0 right-0 lg:left-1/2 z-40 p-3 bg-slate-900/95 backdrop-blur border-t border-slate-700/60">
           <Link
             href="/cart"
