@@ -56,27 +56,25 @@ export default function HomePage() {
         <main className="w-full lg:w-1/2 min-h-screen p-4 space-y-3">
           {/* Mobile hero */}
           <div className="lg:hidden relative rounded-2xl overflow-hidden mb-2">
-            <div className="relative">
-              <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" width={800} height={500} className="object-cover w-full" />
-              <div className="absolute inset-0 bg-black/60" />
-              <div className="relative flex flex-col items-center px-5 py-8">
-                <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-6">
-                  START YOUR ORDER
-                </h1>
-                <div className="w-full max-w-xs space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link href="/menu" className="hero-btn gap-2 text-sm">
-                      <FaUtensils className="text-xs" /> VIEW MENU
-                    </Link>
-                    <a href="tel:+15154902888" className="hero-btn gap-2 text-sm">
-                      <FaPhone className="text-xs" /> CALL
-                    </a>
-                  </div>
-                  <Link href="/menu?mode=pickup" className="hero-btn w-full text-sm">ORDER PICKUP</Link>
-                  <Link href="/menu?mode=delivery" className="hero-btn w-full text-sm">ORDER DELIVERY</Link>
+            <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" />
+            <div className="absolute inset-0 bg-black/60" />
+            <div className="relative z-10 flex flex-col items-center px-5 py-8">
+              <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-6">
+                START YOUR ORDER
+              </h1>
+              <div className="w-full max-w-xs space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Link href="/menu" className="hero-btn gap-2 text-sm">
+                    <FaUtensils className="text-xs" /> VIEW MENU
+                  </Link>
+                  <a href="tel:+15154902888" className="hero-btn gap-2 text-sm">
+                    <FaPhone className="text-xs" /> CALL
+                  </a>
                 </div>
-                <div className="pb-2" />
+                <Link href="/menu?mode=pickup" className="hero-btn w-full text-sm">ORDER PICKUP</Link>
+                <Link href="/menu?mode=delivery" className="hero-btn w-full text-sm">ORDER DELIVERY</Link>
               </div>
+              <div className="pb-2" />
             </div>
           </div>
 

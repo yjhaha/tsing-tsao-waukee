@@ -18,12 +18,12 @@ export default function NavBar() {
           alt="Tsing Tsao"
           width={160}
           height={36}
-          className="object-contain h-8 w-auto"
+          className="object-contain h-8 w-auto max-w-[120px] sm:max-w-none"
           priority
         />
       </Link>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-4">
         <Link
           href="/"
           className={`px-4 py-1.5 text-sm rounded-full transition-colors ${

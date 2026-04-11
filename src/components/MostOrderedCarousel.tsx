@@ -61,8 +61,7 @@ export default function MostOrderedCarousel() {
     <div className="bg-slate-800 rounded-2xl overflow-hidden select-none">
       {/* Photo */}
       <div
-        className="relative w-full cursor-pointer"
-        style={{ aspectRatio: '4/3' }}
+        className="relative w-full cursor-pointer aspect-[8/3] lg:aspect-[4/3]"
         onClick={next}
       >
         <Image
