@@ -174,7 +174,7 @@ export default function HomePage() {
               <p className="text-amber-400 text-xl tracking-widest">★★★★★</p>
             </div>
             <a
-              href="https://g.page/r/REPLACE_WITH_GOOGLE_PLACE_ID/review"
+              href="https://maps.app.goo.gl/TRBtECsW9iRfwxhFA"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white rounded-xl p-1.5 shrink-0 hover:opacity-90 transition-opacity"
