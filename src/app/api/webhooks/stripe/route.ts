@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { buildOrderEmailHtml, buildOrderEmailText, OrderEmailItem } from '@/lib/orderEmail'
+import { saveOrder } from '@/lib/orderStore'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -83,6 +84,17 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     amountTotal: session.amount_total ?? 0,
     sessionId: session.id,
   }
+
+  saveOrder({
+    sessionId: session.id,
+    createdAt: session.created,
+    customerEmail,
+    customerName,
+    customerPhone,
+    orderType,
+    items,
+    amountTotal: session.amount_total ?? 0,
+  })
 
   const { error } = await resend.emails.send({
     from: 'Tsing Tsao Waukee <orders@tsingtsao.com>',
