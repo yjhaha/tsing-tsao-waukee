@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Image from 'next/image'
 import NavBar from '@/components/NavBar'
 import MenuList from './MenuList'
@@ -55,7 +56,9 @@ export default function MenuPage() {
           </div>
 
           {/* MenuList owns both the Pickup/Delivery toggle (top) and the category nav (below it) */}
-          <MenuList categories={categories} />
+          <Suspense>
+            <MenuList categories={categories} />
+          </Suspense>
         </div>
       </div>
     </div>
