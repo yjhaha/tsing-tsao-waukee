@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { FaSearchPlus, FaTimes, FaInfoCircle, FaFire } from 'react-icons/fa'
@@ -269,6 +269,8 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
   const { count, total } = useCart()
   const searchParams = useSearchParams()
   const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
+  const [activeCategory, setActiveCategory] = useState<string>(categories[0]?.id ?? '')
+  const navRef = useRef<HTMLDivElement>(null)
 
   // Honour ?mode=delivery from landing page ORDER DELIVERY button
   useEffect(() => {
@@ -276,6 +278,29 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
     if (mode === 'delivery') setOrderMode('delivery')
     else if (mode === 'pickup') setOrderMode('pickup')
   }, [searchParams])
+
+  // Highlight nav pill as sections scroll into view
+  useEffect(() => {
+    const observers: IntersectionObserver[] = []
+    categories.forEach(cat => {
+      const el = document.getElementById(cat.id)
+      if (!el) return
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveCategory(cat.id) },
+        { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+      )
+      obs.observe(el)
+      observers.push(obs)
+    })
+    return () => observers.forEach(o => o.disconnect())
+  }, [categories])
+
+  // Scroll active nav pill into view
+  useEffect(() => {
+    if (!navRef.current) return
+    const active = navRef.current.querySelector(`[data-cat="${activeCategory}"]`) as HTMLElement | null
+    active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [activeCategory])
 
   const mostOrdered = categories.flatMap(c => c.items).filter(i => i.popular)
 
@@ -314,12 +339,17 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
 
         {/* Category nav */}
         <nav className="border-t border-slate-700/40 px-4">
-          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-none">
+          <div ref={navRef} className="flex gap-1 overflow-x-auto py-2 scrollbar-none">
             {categories.map(cat => (
               <a
                 key={cat.id}
                 href={`#${cat.id}`}
-                className="shrink-0 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-700/60 rounded-lg transition-colors whitespace-nowrap"
+                data-cat={cat.id}
+                className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${
+                  activeCategory === cat.id
+                    ? 'bg-brand-gold text-slate-900 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/60'
+                }`}
               >
                 {cat.name}
               </a>

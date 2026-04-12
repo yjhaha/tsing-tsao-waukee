@@ -200,6 +200,7 @@
           "name": "Chicken Lo Mein / Chow Mein",
           "description": "Tender chicken with seasonal vegetables and your choice of noodle",
           "price": 13.99,
+          "image": "/images/menu/chicken_lo_mein.jpg",
           "loMeinChowMein": true
         },
         {
@@ -404,6 +405,17 @@
             { "name": "Half", "price": 10.99 },
             { "name": "Full", "price": 14.99 }
           ]
+        },
+        {
+          "id": "ch-15",
+          "name": "Szechuan Chicken",
+          "description": "Tender chicken stir-fried with vegetables in a bold, numbing Szechuan sauce",
+          "sizes": [
+            { "name": "Half", "price": 10.99 },
+            { "name": "Full", "price": 14.99 }
+          ],
+          "image": "/images/menu/szechuan_chicken.jpg",
+          "spicy": true
         }
       ]
     },
@@ -477,6 +489,16 @@
           "id": "bf-7",
           "name": "Beef with Peel of Orange",
           "description": "Crispy beef in a tangy orange peel sauce with a fragrant, citrusy finish",
+          "sizes": [
+            { "name": "Half", "price": 11.99 },
+            { "name": "Full", "price": 15.99 }
+          ],
+          "spicy": true
+        },
+        {
+          "id": "bf-8",
+          "name": "Szechuan Beef",
+          "description": "Tender sliced beef stir-fried with vegetables in a bold, numbing Szechuan sauce",
           "sizes": [
             { "name": "Half", "price": 11.99 },
             { "name": "Full", "price": 15.99 }

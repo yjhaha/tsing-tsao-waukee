@@ -197,22 +197,22 @@ export default function HomePage() {
               <a href="https://order.online/store/tsing-tsao-waukee-32583501/?delivery=true" target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/doordash.png" alt="DoorDash" className="h-10 w-auto object-contain" />
+                <img src="/images/logos/doordash.png" alt="DoorDash" className="h-16 w-auto object-contain" />
               </a>
               <a href="https://www.grubhub.com/restaurant/tsing-tsao-160-se-laurel-st-waukee/2534918" target="_blank" rel="noopener noreferrer"
-                className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
+                className="flex items-center justify-center bg-[#F5603D] rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/grubhub.svg" alt="Grubhub" className="h-10 w-auto object-contain" />
+                <img src="/images/logos/grubhub.svg" alt="Grubhub" className="h-8 w-auto object-contain brightness-0 invert" />
               </a>
               <a href="https://www.ubereats.com/store/tsing-tsao-waukees/OdKVOdx6WcmTv6KFtJK9tw?srsltid=AfmBOoqWNo_U6PtCVDGiDSSJ7w2SmUNyeSospZxA6TISqaR0JEJ9KH1C" target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center bg-white rounded-xl px-4 py-3 h-16 hover:opacity-90 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/ubereats.png" alt="Uber Eats" className="h-10 w-auto object-contain" />
+                <img src="/images/logos/ubereats.png" alt="Uber Eats" className="h-12 w-auto object-contain" />
               </a>
               <a href="https://eatfuticonnect.com/restaurants/detail/456" target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center bg-black rounded-xl px-4 py-3 h-16 border border-slate-700 hover:border-slate-500 transition-colors">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/logos/eatfuti.png" alt="EatFuti" className="h-10 w-auto object-contain" />
+                <img src="/images/logos/eatfuti.png" alt="EatFuti" className="h-8 w-auto object-contain" />
               </a>
             </div>
           </div>
