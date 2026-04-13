@@ -16,7 +16,7 @@ export function saveOrder(order: KitchenOrder) {
 }
 
 export function getOrders(): KitchenOrder[] {
-  return [...store.values()].sort((a, b) => b.createdAt - a.createdAt)
+  return Array.from(store.values()).sort((a, b) => b.createdAt - a.createdAt)
 }
 
 export function getOrder(sessionId: string): KitchenOrder | undefined {
