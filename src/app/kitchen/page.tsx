@@ -35,7 +35,7 @@ function playChime() {
       osc.frequency.value = freq
       const t = ctx.currentTime + i * 0.12
       gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.25, t + 0.03)
+      gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
       osc.start(t)
       osc.stop(t + 0.4)
@@ -180,7 +180,14 @@ function OrderCard({
       {(order.customerName || order.customerPhone) && (
         <div className="text-sm">
           {order.customerName && <p className="text-white font-medium">{order.customerName}</p>}
-          {order.customerPhone && <p className="text-slate-400">{order.customerPhone}</p>}
+          {order.customerPhone && (
+            <a
+              href={`tel:${order.customerPhone}`}
+              className={`font-medium ${status !== 'ready' ? 'text-brand-gold' : 'text-slate-500'}`}
+            >
+              {order.customerPhone}
+            </a>
+          )}
         </div>
       )}
 
