@@ -96,9 +96,12 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     amountTotal: session.amount_total ?? 0,
   })
 
+  const RESTAURANT_EMAIL = 'tsingtsaowaukee@gmail.com'
+
   const { error } = await resend.emails.send({
     from: 'Tsing Tsao Waukee <orders@tsingtsao.com>',
     to: customerEmail,
+    bcc: RESTAURANT_EMAIL,
     subject: `Your Tsing Tsao order is confirmed! 🥡`,
     html: buildOrderEmailHtml(emailData),
     text: buildOrderEmailText(emailData),
@@ -108,5 +111,5 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     throw new Error(`Resend error: ${JSON.stringify(error)}`)
   }
 
-  console.log(`[webhook] Confirmation email sent to ${customerEmail} for session ${session.id}`)
+  console.log(`[webhook] Confirmation email sent to ${customerEmail} (bcc: ${RESTAURANT_EMAIL}) for session ${session.id}`)
 }
