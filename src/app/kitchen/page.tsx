@@ -44,12 +44,19 @@ function playChime() {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+const OVERDUE_MINUTES = 25
+
 function timeAgo(unix: number): string {
   const secs = Math.floor(Date.now() / 1000) - unix
   if (secs < 60) return `${secs}s ago`
   const mins = Math.floor(secs / 60)
   if (mins < 60) return `${mins}m ago`
   return `${Math.floor(mins / 60)}h ${mins % 60}m ago`
+}
+
+function isOverdue(unix: number): boolean {
+  const mins = Math.floor((Date.now() / 1000 - unix) / 60)
+  return mins >= OVERDUE_MINUTES
 }
 
 function fmt(cents: number) {
@@ -168,7 +175,18 @@ function OrderCard({
               </span>
             )}
           </div>
-          <p className="text-slate-400 text-xs mt-0.5">{timeAgo(order.createdAt)}</p>
+          {status !== 'ready' && isOverdue(order.createdAt) ? (
+            <p className="text-red-400 text-xs mt-0.5 flex items-center gap-1">
+              {/* clock icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="inline w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {timeAgo(order.createdAt)}
+            </p>
+          ) : (
+            <p className="text-slate-400 text-xs mt-0.5">{timeAgo(order.createdAt)}</p>
+          )}
         </div>
         <div className="text-right shrink-0">
           <p className="text-white font-bold">{fmt(order.amountTotal)}</p>

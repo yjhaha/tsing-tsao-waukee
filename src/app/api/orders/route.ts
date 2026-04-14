@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
+// Never cache this route — it must always hit Stripe for live order data
+export const dynamic = 'force-dynamic'
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
 })
