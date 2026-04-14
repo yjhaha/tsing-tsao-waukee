@@ -226,6 +226,23 @@ function OrderCard({
   )
 }
 
+const STORAGE_KEY = 'kitchen_ready_statuses'
+
+function loadStoredStatuses(): Record<string, OrderStatus> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveStoredStatuses(statuses: Record<string, OrderStatus>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(statuses))
+  } catch { /* ignore */ }
+}
+
 // ── Kitchen Display ───────────────────────────────────────────────────────────
 function KitchenDisplay() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -234,6 +251,12 @@ function KitchenDisplay() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const knownIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
+  const countdownRef = useRef(POLL_INTERVAL / 1000)
+
+  // Load persisted ready statuses from localStorage on mount
+  useEffect(() => {
+    setStatuses(loadStoredStatuses())
+  }, [])
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -241,11 +264,15 @@ function KitchenDisplay() {
       if (!res.ok) return
       const { orders: fetched }: { orders: Order[] } = await res.json()
 
+      const stored = loadStoredStatuses()
       const newOnes: string[] = []
       fetched.forEach(o => {
         if (!knownIds.current.has(o.sessionId)) {
           knownIds.current.add(o.sessionId)
-          if (!firstLoad.current) newOnes.push(o.sessionId)
+          // Only chime if it's not already known as ready (from localStorage)
+          if (!firstLoad.current && stored[o.sessionId] !== 'ready') {
+            newOnes.push(o.sessionId)
+          }
         }
       })
 
@@ -254,12 +281,15 @@ function KitchenDisplay() {
         setStatuses(prev => {
           const next = { ...prev }
           newOnes.forEach(id => { next[id] = 'new' })
+          saveStoredStatuses(next)
           return next
         })
       }
 
       setOrders(fetched)
       setLastUpdated(new Date())
+      // Reset countdown
+      countdownRef.current = POLL_INTERVAL / 1000
       setCountdown(POLL_INTERVAL / 1000)
       firstLoad.current = false
     } catch {
@@ -274,9 +304,12 @@ function KitchenDisplay() {
     return () => clearInterval(poll)
   }, [fetchOrders])
 
-  // Countdown ticker
+  // Countdown ticker — driven by countdownRef so it stays in sync with fetch
   useEffect(() => {
-    const t = setInterval(() => setCountdown(n => Math.max(0, n - 1)), 1000)
+    const t = setInterval(() => {
+      countdownRef.current = Math.max(0, countdownRef.current - 1)
+      setCountdown(countdownRef.current)
+    }, 1000)
     return () => clearInterval(t)
   }, [])
 
@@ -285,7 +318,11 @@ function KitchenDisplay() {
   }
 
   async function markReady(id: string) {
-    setStatuses(prev => ({ ...prev, [id]: 'ready' }))
+    setStatuses(prev => {
+      const next = { ...prev, [id]: 'ready' as OrderStatus }
+      saveStoredStatuses(next)
+      return next
+    })
     try {
       await fetch(`/api/orders/${id}/ready`, { method: 'POST' })
     } catch {
@@ -294,7 +331,11 @@ function KitchenDisplay() {
   }
 
   function markActive(id: string) {
-    setStatuses(prev => ({ ...prev, [id]: 'active' }))
+    setStatuses(prev => {
+      const next = { ...prev, [id]: 'active' as OrderStatus }
+      saveStoredStatuses(next)
+      return next
+    })
   }
 
   const active = orders.filter(o => getStatus(o.sessionId) !== 'ready')
