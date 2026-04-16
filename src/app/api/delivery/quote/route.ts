@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { DeliveryAddress } from '@/lib/delivery/types'
 import { getDeliveryConfig } from '@/lib/delivery/config'
 import { haversineDistanceMiles, geocodeAddress } from '@/lib/delivery/haversine'
-import { getDoorDashQuote } from '@/lib/delivery/doordash'
+import { getDeliveryQuote } from '@/lib/delivery/provider'
 
 export const runtime = 'nodejs'
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     // Use a stable external delivery ID derived from the nonce
     const externalDeliveryId = `cs_${sessionNonce}`
 
-    const quote = await getDoorDashQuote(externalDeliveryId, address, orderValueCents ?? 0)
+    const quote = await getDeliveryQuote(externalDeliveryId, address, orderValueCents ?? 0)
 
     return NextResponse.json({ quote })
   } catch (err) {

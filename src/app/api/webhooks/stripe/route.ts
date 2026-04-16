@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { buildOrderEmailHtml, buildOrderEmailText, OrderEmailItem } from '@/lib/orderEmail'
 import { saveOrder } from '@/lib/orderStore'
-import { createDoorDashDelivery } from '@/lib/delivery/doordash'
+import { createDelivery } from '@/lib/delivery/provider'
 import type { DeliveryAddress } from '@/lib/delivery/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -101,7 +101,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   if (isDelivery && deliveryAddress && externalDeliveryId) {
     try {
       console.log(`[webhook] Dispatching DoorDash delivery for session ${session.id}`)
-      const dispatch = await createDoorDashDelivery({
+      const dispatch = await createDelivery({
         externalDeliveryId,
         dropoffAddress: deliveryAddress,
         dropoffName: customerName ?? '',
