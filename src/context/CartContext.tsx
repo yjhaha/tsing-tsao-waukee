@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { DeliveryAddress, DeliveryQuote } from '@/lib/delivery/types'
 
 export interface CartItem {
   id: string
@@ -11,7 +12,10 @@ export interface CartItem {
   quantity: number
 }
 
+export type OrderMode = 'pickup' | 'delivery'
+
 interface CartContextType {
+  // ── Items ──────────────────────────────────────────────────────────────────
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity'>) => void
   removeItem: (id: string) => void
@@ -19,12 +23,25 @@ interface CartContextType {
   total: number
   count: number
   clear: () => void
+  // ── Order mode ─────────────────────────────────────────────────────────────
+  orderMode: OrderMode
+  setOrderMode: (mode: OrderMode) => void
+  // ── Delivery details (only relevant when orderMode === 'delivery') ─────────
+  deliveryAddress: DeliveryAddress | null
+  setDeliveryAddress: (address: DeliveryAddress | null) => void
+  deliveryQuote: DeliveryQuote | null
+  setDeliveryQuote: (quote: DeliveryQuote | null) => void
+  /** Total the customer pays = food subtotal + customer delivery fee. */
+  grandTotal: number
 }
 
 const CartContext = createContext<CartContextType | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
+  const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress | null>(null)
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null)
 
   function addItem(incoming: Omit<CartItem, 'quantity'>) {
     setItems(prev => {
@@ -52,13 +69,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function clear() {
     setItems([])
+    setDeliveryAddress(null)
+    setDeliveryQuote(null)
   }
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const count = items.reduce((sum, i) => sum + i.quantity, 0)
 
+  // Grand total includes delivery fee charged to the customer
+  const deliveryFeeDollars =
+    orderMode === 'delivery' && deliveryQuote
+      ? deliveryQuote.customerFeeCents / 100
+      : 0
+  const grandTotal = total + deliveryFeeDollars
+
+  // Reset delivery quote if address changes
+  function handleSetDeliveryAddress(address: DeliveryAddress | null) {
+    setDeliveryAddress(address)
+    setDeliveryQuote(null) // stale quote — force re-check
+  }
+
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, total, count, clear }}>
+    <CartContext.Provider
+      value={{
+        items, addItem, removeItem, updateQuantity, total, count, clear,
+        orderMode, setOrderMode,
+        deliveryAddress, setDeliveryAddress: handleSetDeliveryAddress,
+        deliveryQuote, setDeliveryQuote,
+        grandTotal,
+      }}
+    >
       {children}
     </CartContext.Provider>
   )

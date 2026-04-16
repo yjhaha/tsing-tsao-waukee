@@ -3,6 +3,8 @@ import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { buildOrderEmailHtml, buildOrderEmailText, OrderEmailItem } from '@/lib/orderEmail'
 import { saveOrder } from '@/lib/orderStore'
+import { createDoorDashDelivery } from '@/lib/delivery/doordash'
+import type { DeliveryAddress } from '@/lib/delivery/types'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -42,8 +44,9 @@ export async function POST(req: NextRequest) {
     try {
       await handleOrderConfirmation(session)
     } catch (err) {
-      console.error('[webhook] Failed to send order confirmation:', err)
-      // Return 200 so Stripe doesn't retry — the order was placed, email is non-critical
+      console.error('[webhook] Failed to handle order confirmation:', err)
+      // Return 200 so Stripe doesn't retry — the order was placed,
+      // operational failures (email, delivery) are non-critical to payment receipt
     }
   }
 
@@ -57,34 +60,66 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     return
   }
 
-  // Retrieve line items (not included in the webhook payload by default)
+  const customerName = session.customer_details?.name ?? undefined
+  const customerPhone = session.customer_details?.phone ?? undefined
+
+  // ── Extract order type & delivery metadata ─────────────────────────────────
+  const meta = session.metadata ?? {}
+  const orderType = meta.order_type ?? 'pickup'
+  const isDelivery = orderType === 'delivery'
+
+  let deliveryAddress: DeliveryAddress | undefined
+  let externalDeliveryId: string | undefined
+
+  if (isDelivery) {
+    deliveryAddress = {
+      street: meta.delivery_street ?? '',
+      unit: meta.delivery_unit || undefined,
+      city: meta.delivery_city ?? '',
+      state: meta.delivery_state ?? '',
+      zip: meta.delivery_zip ?? '',
+    }
+    externalDeliveryId = meta.delivery_external_id || undefined
+  }
+
+  // ── Retrieve line items ────────────────────────────────────────────────────
   const lineItemsResponse = await stripe.checkout.sessions.listLineItems(session.id, {
     limit: 100,
   })
 
-  const items: OrderEmailItem[] = lineItemsResponse.data.map(li => ({
-    name: li.description ?? 'Item',
-    quantity: li.quantity ?? 1,
-    amount_total: li.amount_total, // cents
-  }))
+  const items: OrderEmailItem[] = lineItemsResponse.data
+    .filter(li => li.description !== 'Delivery Fee') // exclude the fee from order items
+    .map(li => ({
+      name: li.description ?? 'Item',
+      quantity: li.quantity ?? 1,
+      amount_total: li.amount_total,
+    }))
 
-  // Extract order type from custom_fields
-  const orderTypeField = session.custom_fields?.find(f => f.key === 'order_type')
-  const orderType = orderTypeField?.dropdown?.value ?? 'pickup'
+  // ── Dispatch DoorDash delivery ─────────────────────────────────────────────
+  let deliveryTrackingUrl: string | undefined
 
-  const customerName = session.customer_details?.name ?? undefined
-  const customerPhone = session.customer_details?.phone ?? undefined
-
-  const emailData = {
-    customerEmail,
-    customerName,
-    customerPhone,
-    orderType,
-    items,
-    amountTotal: session.amount_total ?? 0,
-    sessionId: session.id,
+  if (isDelivery && deliveryAddress && externalDeliveryId) {
+    try {
+      console.log(`[webhook] Dispatching DoorDash delivery for session ${session.id}`)
+      const dispatch = await createDoorDashDelivery({
+        externalDeliveryId,
+        dropoffAddress: deliveryAddress,
+        dropoffName: customerName ?? '',
+        dropoffPhone: customerPhone ?? '',
+        dropoffInstructions: '',
+        orderValueCents: session.amount_total ?? 0,
+      })
+      deliveryTrackingUrl = dispatch.trackingUrl
+      console.log(`[webhook] DoorDash delivery created: ${dispatch.externalDeliveryId}, tracking: ${dispatch.trackingUrl}`)
+    } catch (err) {
+      // Log but don't throw — customer paid, we must not leave them unconfirmed.
+      // The restaurant should be alerted so they can manually arrange delivery.
+      console.error('[webhook] DoorDash dispatch failed:', err)
+      // Fall through and still save the order + send confirmation without tracking
+    }
   }
 
+  // ── Save to order store ────────────────────────────────────────────────────
   saveOrder({
     sessionId: session.id,
     createdAt: session.created,
@@ -94,15 +129,33 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     orderType,
     items,
     amountTotal: session.amount_total ?? 0,
+    deliveryAddress,
+    externalDeliveryId,
+    deliveryTrackingUrl,
+    deliveryStatus: isDelivery ? 'created' : undefined,
   })
 
-  const RESTAURANT_EMAIL = 'tsingtsaowaukee@gmail.com'
+  // ── Send confirmation email ────────────────────────────────────────────────
+  const RESTAURANT_EMAIL = process.env.RESTAURANT_EMAIL ?? 'tsingtsaowaukee@gmail.com'
+  const RESTAURANT_NAME = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
+
+  const emailData = {
+    customerEmail,
+    customerName,
+    customerPhone,
+    orderType,
+    items,
+    amountTotal: session.amount_total ?? 0,
+    sessionId: session.id,
+    deliveryAddress,
+    deliveryTrackingUrl,
+  }
 
   const { error } = await resend.emails.send({
-    from: 'Tsing Tsao Waukee <orders@tsingtsao.com>',
+    from: `${RESTAURANT_NAME} <orders@tsingtsao.com>`,
     to: customerEmail,
     bcc: RESTAURANT_EMAIL,
-    subject: `Your Tsing Tsao order is confirmed! 🥡`,
+    subject: `Your ${RESTAURANT_NAME} order is confirmed! 🥡`,
     html: buildOrderEmailHtml(emailData),
     text: buildOrderEmailText(emailData),
   })
@@ -111,5 +164,8 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     throw new Error(`Resend error: ${JSON.stringify(error)}`)
   }
 
-  console.log(`[webhook] Confirmation email sent to ${customerEmail} (bcc: ${RESTAURANT_EMAIL}) for session ${session.id}`)
+  console.log(
+    `[webhook] Confirmation sent to ${customerEmail} (bcc: ${RESTAURANT_EMAIL}) for session ${session.id}` +
+      (isDelivery ? ` [delivery, tracking: ${deliveryTrackingUrl ?? 'pending'}]` : ' [pickup]'),
+  )
 }

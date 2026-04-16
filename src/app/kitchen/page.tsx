@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { DeliveryAddress } from '@/lib/delivery/types'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -17,9 +18,23 @@ interface Order {
   orderType: string
   items: OrderItem[]
   amountTotal: number
+  // Delivery fields
+  deliveryAddress?: DeliveryAddress
+  deliveryTrackingUrl?: string
+  deliveryStatus?: string
 }
 
 type OrderStatus = 'new' | 'active' | 'ready'
+
+// ── Delivery status display config ───────────────────────────────────────────
+const DELIVERY_STATUS_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
+  created: { label: 'Awaiting driver', icon: '⏳', color: 'bg-slate-600 text-slate-200' },
+  driver_assigned: { label: 'Driver assigned', icon: '🛵', color: 'bg-blue-700 text-blue-100' },
+  picked_up: { label: 'Picked up', icon: '🥡', color: 'bg-amber-700 text-amber-100' },
+  delivered: { label: 'Delivered', icon: '✅', color: 'bg-green-700 text-green-100' },
+  cancelled: { label: 'Cancelled', icon: '⚠️', color: 'bg-red-700 text-red-100' },
+  failed: { label: 'Failed', icon: '⚠️', color: 'bg-red-700 text-red-100' },
+}
 
 // ── Audio chime ──────────────────────────────────────────────────────────────
 function playChime() {
@@ -131,6 +146,31 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   )
 }
 
+// ── Delivery Status Badge ─────────────────────────────────────────────────────
+function DeliveryStatusBadge({ status, trackingUrl }: { status?: string; trackingUrl?: string }) {
+  const config = status ? DELIVERY_STATUS_CONFIG[status] : DELIVERY_STATUS_CONFIG.created
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${config.color}`}>
+        <span>{config.icon}</span>
+        {config.label}
+      </span>
+      {trackingUrl && (
+        <a
+          href={trackingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors underline"
+          onClick={e => e.stopPropagation()}
+        >
+          Track driver →
+        </a>
+      )}
+    </div>
+  )
+}
+
 // ── Order Card ────────────────────────────────────────────────────────────────
 function OrderCard({
   order,
@@ -150,11 +190,14 @@ function OrderCard({
   }, [])
 
   const shortId = order.sessionId.slice(-6).toUpperCase()
+  const isDelivery = order.orderType === 'delivery'
 
   return (
     <div className={`rounded-2xl border flex flex-col gap-3 p-4 transition-colors ${
       status === 'new'
-        ? 'bg-slate-800 border-brand-gold'
+        ? isDelivery
+          ? 'bg-slate-800 border-blue-500'
+          : 'bg-slate-800 border-brand-gold'
         : status === 'ready'
         ? 'bg-slate-900 border-slate-700 opacity-60'
         : 'bg-slate-800 border-slate-700'
@@ -162,10 +205,12 @@ function OrderCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-white font-bold text-lg">#{shortId}</span>
             {status === 'new' && (
-              <span className="bg-brand-gold text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                isDelivery ? 'bg-blue-500 text-white' : 'bg-brand-gold text-slate-900'
+              }`}>
                 New
               </span>
             )}
@@ -174,10 +219,15 @@ function OrderCard({
                 Ready
               </span>
             )}
+            {/* Delivery/Pickup badge */}
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+              isDelivery ? 'bg-blue-900 text-blue-300' : 'bg-slate-700 text-slate-400'
+            }`}>
+              {isDelivery ? '🛵 Delivery' : '🥡 Pickup'}
+            </span>
           </div>
           {status !== 'ready' && isOverdue(order.createdAt) ? (
             <p className="text-red-400 text-xs mt-0.5 flex items-center gap-1">
-              {/* clock icon */}
               <svg xmlns="http://www.w3.org/2000/svg" className="inline w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
@@ -190,9 +240,28 @@ function OrderCard({
         </div>
         <div className="text-right shrink-0">
           <p className="text-white font-bold">{fmt(order.amountTotal)}</p>
-          <p className="text-slate-500 text-xs capitalize">{order.orderType}</p>
         </div>
       </div>
+
+      {/* Delivery status */}
+      {isDelivery && (
+        <DeliveryStatusBadge
+          status={order.deliveryStatus}
+          trackingUrl={order.deliveryTrackingUrl}
+        />
+      )}
+
+      {/* Delivery address */}
+      {isDelivery && order.deliveryAddress && (
+        <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-2">
+          <p className="text-slate-500 font-medium mb-0.5 uppercase tracking-wide text-[10px]">Drop off</p>
+          <p>
+            {order.deliveryAddress.street}
+            {order.deliveryAddress.unit ? ` #${order.deliveryAddress.unit}` : ''},&nbsp;
+            {order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zip}
+          </p>
+        </div>
+      )}
 
       {/* Customer info */}
       {(order.customerName || order.customerPhone) && (
@@ -229,7 +298,7 @@ function OrderCard({
           onClick={onMarkReady}
           className="mt-1 w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition-colors active:scale-95"
         >
-          Mark Ready
+          {isDelivery ? 'Ready for Pickup by Driver' : 'Mark Ready'}
         </button>
       ) : (
         <button
@@ -287,7 +356,6 @@ function KitchenDisplay() {
       fetched.forEach(o => {
         if (!knownIds.current.has(o.sessionId)) {
           knownIds.current.add(o.sessionId)
-          // Only chime if it's not already known as ready (from localStorage)
           if (!firstLoad.current && stored[o.sessionId] !== 'ready') {
             newOnes.push(o.sessionId)
           }
@@ -306,7 +374,6 @@ function KitchenDisplay() {
 
       setOrders(fetched)
       setLastUpdated(new Date())
-      // Reset countdown
       countdownRef.current = POLL_INTERVAL / 1000
       setCountdown(POLL_INTERVAL / 1000)
       firstLoad.current = false
@@ -322,7 +389,7 @@ function KitchenDisplay() {
     return () => clearInterval(poll)
   }, [fetchOrders])
 
-  // Countdown ticker — driven by countdownRef so it stays in sync with fetch
+  // Countdown ticker
   useEffect(() => {
     const t = setInterval(() => {
       countdownRef.current = Math.max(0, countdownRef.current - 1)
@@ -344,7 +411,7 @@ function KitchenDisplay() {
     try {
       await fetch(`/api/orders/${id}/ready`, { method: 'POST' })
     } catch {
-      // non-critical — order is already marked ready in UI
+      // non-critical
     }
   }
 
@@ -358,16 +425,30 @@ function KitchenDisplay() {
 
   const active = orders.filter(o => getStatus(o.sessionId) !== 'ready')
   const done = orders.filter(o => getStatus(o.sessionId) === 'ready')
+  const deliveryCount = active.filter(o => o.orderType === 'delivery').length
+  const pickupCount = active.filter(o => o.orderType !== 'delivery').length
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h1 className="font-display italic text-xl text-white">Kitchen Display</h1>
-          <span className="bg-brand-gold text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
-            {active.length} active
-          </span>
+          {active.length > 0 && (
+            <span className="bg-brand-gold text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
+              {active.length} active
+            </span>
+          )}
+          {deliveryCount > 0 && (
+            <span className="bg-blue-700 text-blue-100 text-xs font-bold px-2 py-0.5 rounded-full">
+              🛵 {deliveryCount} delivery
+            </span>
+          )}
+          {pickupCount > 0 && (
+            <span className="bg-slate-700 text-slate-200 text-xs font-bold px-2 py-0.5 rounded-full">
+              🥡 {pickupCount} pickup
+            </span>
+          )}
         </div>
         <div className="text-slate-500 text-xs text-right">
           <p>Refreshing in {countdown}s</p>
@@ -376,7 +457,6 @@ function KitchenDisplay() {
       </div>
 
       <div className="p-4 max-w-5xl mx-auto">
-        {/* Active orders */}
         {active.length === 0 && done.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <p className="text-slate-500 text-lg">No orders in the last 24 hours</p>
@@ -398,7 +478,6 @@ function KitchenDisplay() {
           </div>
         )}
 
-        {/* Ready orders */}
         {done.length > 0 && (
           <>
             <p className="text-slate-600 text-xs font-semibold uppercase tracking-widest mb-3">
