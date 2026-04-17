@@ -67,7 +67,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
 
   const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
   const restaurantPhone = process.env.RESTAURANT_PHONE ?? '(515) 830-9600'
-  const restaurantStreet = process.env.RESTAURANT_ADDRESS_STREET ?? '905 University Ave'
+  const restaurantStreet = process.env.RESTAURANT_ADDRESS_STREET ?? '160 SE Laurel St'
   const restaurantCity = process.env.RESTAURANT_ADDRESS_CITY ?? 'Waukee'
   const restaurantState = process.env.RESTAURANT_ADDRESS_STATE ?? 'IA'
   const restaurantZip = process.env.RESTAURANT_ADDRESS_ZIP ?? '50263'
@@ -239,7 +239,7 @@ export function buildOrderEmailText(data: OrderEmailData): string {
 
   const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
   const restaurantPhone = process.env.RESTAURANT_PHONE ?? '(515) 830-9600'
-  const restaurantStreet = process.env.RESTAURANT_ADDRESS_STREET ?? '905 University Ave'
+  const restaurantStreet = process.env.RESTAURANT_ADDRESS_STREET ?? '160 SE Laurel St'
   const restaurantCity = process.env.RESTAURANT_ADDRESS_CITY ?? 'Waukee'
   const restaurantState = process.env.RESTAURANT_ADDRESS_STATE ?? 'IA'
   const restaurantZip = process.env.RESTAURANT_ADDRESS_ZIP ?? '50263'

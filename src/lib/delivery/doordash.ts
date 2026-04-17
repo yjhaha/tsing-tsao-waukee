@@ -14,7 +14,7 @@
  */
 
 import crypto from 'crypto'
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
 import { getDeliveryConfig } from './config'
 
 const BASE_URL =
@@ -156,14 +156,7 @@ interface DdDeliveryResponse {
   tracking_url: string
 }
 
-export interface DispatchParams {
-  externalDeliveryId: string
-  dropoffAddress: DeliveryAddress
-  dropoffName: string
-  dropoffPhone: string
-  dropoffInstructions?: string
-  orderValueCents: number
-}
+// DispatchParams is defined in types.ts — re-exported here for convenience
 
 /**
  * Create a real delivery on DoorDash Drive (called after payment is confirmed).

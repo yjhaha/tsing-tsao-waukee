@@ -40,3 +40,13 @@ export type DeliveryStatus =
   | 'delivered'
   | 'cancelled'
   | 'failed'
+
+/** Parameters for dispatching a delivery after payment is confirmed. */
+export interface DispatchParams {
+  externalDeliveryId: string
+  dropoffAddress: DeliveryAddress
+  dropoffName: string
+  dropoffPhone: string
+  dropoffInstructions?: string
+  orderValueCents: number
+}

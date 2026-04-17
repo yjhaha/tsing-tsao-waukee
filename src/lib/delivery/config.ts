@@ -33,15 +33,15 @@ export function getDeliveryConfig(): RestaurantDeliveryConfig {
   return {
     restaurantName: process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee',
     address: {
-      street: process.env.RESTAURANT_ADDRESS_STREET ?? '905 University Ave',
+      street: process.env.RESTAURANT_ADDRESS_STREET ?? '160 SE Laurel St',
       city: process.env.RESTAURANT_ADDRESS_CITY ?? 'Waukee',
       state: process.env.RESTAURANT_ADDRESS_STATE ?? 'IA',
       zip: process.env.RESTAURANT_ADDRESS_ZIP ?? '50263',
-      lat: parseFloat(process.env.RESTAURANT_LAT ?? '41.6082'),
-      lng: parseFloat(process.env.RESTAURANT_LNG ?? '-93.9946'),
+      lat: parseFloat(process.env.RESTAURANT_LAT ?? '41.6132'),
+      lng: parseFloat(process.env.RESTAURANT_LNG ?? '-93.8692'),
     },
-    phone: process.env.RESTAURANT_PHONE ?? '(515) 830-9600',
-    deliveryRadiusMiles: parseFloat(process.env.DELIVERY_RADIUS_MILES ?? '5'),
+    phone: process.env.RESTAURANT_PHONE ?? '(515) 987-6017',
+    deliveryRadiusMiles: parseFloat(process.env.DELIVERY_RADIUS_MILES ?? '8'),
     customerFeeCents: parseInt(process.env.DELIVERY_FEE_CUSTOMER_CENTS ?? '500', 10),
     restaurantFeeCents: parseInt(process.env.DELIVERY_FEE_RESTAURANT_CENTS ?? '200', 10),
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
@@ -16,29 +16,27 @@ interface OrderDetails {
   deliveryStatus: string | null
 }
 
-function fmt(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`
-}
-
 function formatAddress(a: DeliveryAddress): string {
   const parts = [a.street]
   if (a.unit) parts.push(`#${a.unit}`)
   return `${parts.join(', ')}, ${a.city}, ${a.state} ${a.zip}`
 }
 
-// ── Delivery Tracking Panel ────────────────────────────────────────────────────
+// ── Delivery Tracking Panel ───────────────────────────────────────────────────
 
 function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   const statusLabels: Record<string, { label: string; icon: string; color: string }> = {
-    created: { label: 'Order confirmed — driver will be assigned soon', icon: '✅', color: 'text-slate-300' },
-    driver_assigned: { label: 'Driver assigned and heading to restaurant', icon: '🛵', color: 'text-blue-400' },
-    picked_up: { label: 'Your food has been picked up!', icon: '🥡', color: 'text-brand-gold' },
-    delivered: { label: 'Delivered!', icon: '🎉', color: 'text-green-400' },
-    cancelled: { label: 'Delivery was cancelled — please contact us', icon: '⚠️', color: 'text-red-400' },
-    failed: { label: 'Delivery issue — please contact us', icon: '⚠️', color: 'text-red-400' },
+    created:         { label: 'Order confirmed — driver will be assigned soon', icon: '✅', color: 'text-slate-300' },
+    driver_assigned: { label: 'Driver assigned and heading to restaurant',       icon: '🛵', color: 'text-blue-400' },
+    picked_up:       { label: 'Your food has been picked up!',                   icon: '🥡', color: 'text-brand-gold' },
+    delivered:       { label: 'Delivered!',                                      icon: '🎉', color: 'text-green-400' },
+    cancelled:       { label: 'Delivery was cancelled — please contact us',      icon: '⚠️', color: 'text-red-400' },
+    failed:          { label: 'Delivery issue — please contact us',              icon: '⚠️', color: 'text-red-400' },
   }
 
-  const current = order.deliveryStatus ? statusLabels[order.deliveryStatus] : statusLabels.created
+  const current = order.deliveryStatus
+    ? (statusLabels[order.deliveryStatus] ?? statusLabels.created)
+    : statusLabels.created
 
   return (
     <div className="mt-8 bg-slate-800 rounded-2xl p-5 text-left">
@@ -46,7 +44,6 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
         🛵 <span>Delivery Status</span>
       </h2>
 
-      {/* Address */}
       {order.deliveryAddress && (
         <div className="mb-4">
           <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">Delivering to</p>
@@ -54,15 +51,11 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
         </div>
       )}
 
-      {/* Status */}
       <div className="mb-4 flex items-start gap-3">
-        <span className="text-xl">{current?.icon}</span>
-        <p className={`text-sm font-medium ${current?.color ?? 'text-slate-300'}`}>
-          {current?.label}
-        </p>
+        <span className="text-xl">{current.icon}</span>
+        <p className={`text-sm font-medium ${current.color}`}>{current.label}</p>
       </div>
 
-      {/* Tracking link */}
       {order.deliveryTrackingUrl ? (
         <a
           href={order.deliveryTrackingUrl}
@@ -81,16 +74,15 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// ── Inner component — uses useSearchParams, must be inside <Suspense> ─────────
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
 
   const [order, setOrder] = useState<OrderDetails | null>(null)
   const [attempts, setAttempts] = useState(0)
 
-  // Poll the order endpoint until the webhook has populated the store
   useEffect(() => {
     if (!sessionId) return
 
@@ -102,7 +94,7 @@ export default function SuccessPage() {
         if (res.ok) {
           const data = await res.json()
           setOrder(data)
-          // For delivery orders, keep polling to catch tracking URL updates
+          // Keep polling delivery orders until we have a tracking URL (max ~1 min)
           if (data.orderType === 'delivery' && !data.deliveryTrackingUrl && attempts < 12) {
             setAttempts(n => n + 1)
             timeoutId = setTimeout(poll, 5_000)
@@ -111,7 +103,6 @@ export default function SuccessPage() {
         }
       } catch { /* ignore */ }
 
-      // Retry with back-off (max 12 attempts × ~3s = ~36s)
       if (attempts < 12) {
         setAttempts(n => n + 1)
         timeoutId = setTimeout(poll, 3_000)
@@ -126,41 +117,55 @@ export default function SuccessPage() {
   const isDelivery = order?.orderType === 'delivery'
 
   return (
+    <div className="max-w-md mx-auto px-4 pt-32 pb-12 text-center">
+      <div className="text-6xl mb-6">{isDelivery ? '🛵' : '🎉'}</div>
+      <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
+      <p className="text-slate-400 text-base mb-2">
+        {isDelivery
+          ? "Your order is confirmed. We're preparing your food and dispatching a driver."
+          : "Thank you for ordering from Tsing Tsao. We're preparing your food now."}
+      </p>
+      <p className="text-slate-500 text-sm mb-6">
+        A confirmation will be sent to your email shortly.
+      </p>
+
+      {isDelivery && order && <DeliveryTrackingPanel order={order} />}
+
+      {!order && sessionId && (
+        <div className="mt-4 text-slate-600 text-sm animate-pulse">
+          Loading order details…
+        </div>
+      )}
+
+      <div className="mt-8">
+        <Link
+          href="/menu"
+          className="inline-block px-8 py-3.5 bg-brand-gold text-slate-900 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
+        >
+          Back to Menu
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ── Page — wraps the inner component in Suspense ──────────────────────────────
+
+export default function SuccessPage() {
+  return (
     <div className="min-h-screen bg-slate-900">
       <NavBar />
-      <div className="max-w-md mx-auto px-4 pt-32 pb-12 text-center">
-        <div className="text-6xl mb-6">{isDelivery ? '🛵' : '🎉'}</div>
-        <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
-        <p className="text-slate-400 text-base mb-2">
-          {isDelivery
-            ? 'Your order is confirmed. We\'re preparing your food and dispatching a driver.'
-            : 'Thank you for ordering from Tsing Tsao. We\'re preparing your food now.'}
-        </p>
-        <p className="text-slate-500 text-sm mb-6">
-          A confirmation will be sent to your email shortly.
-        </p>
-
-        {/* Delivery tracking panel — shown once order data loads */}
-        {isDelivery && order && (
-          <DeliveryTrackingPanel order={order} />
-        )}
-
-        {/* Loading state for delivery */}
-        {!order && sessionId && (
-          <div className="mt-4 text-slate-600 text-sm animate-pulse">
-            Loading order details…
+      <Suspense
+        fallback={
+          <div className="max-w-md mx-auto px-4 pt-32 pb-12 text-center">
+            <div className="text-6xl mb-6">🎉</div>
+            <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
+            <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
           </div>
-        )}
-
-        <div className="mt-8">
-          <Link
-            href="/menu"
-            className="inline-block px-8 py-3.5 bg-brand-gold text-slate-900 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
-          >
-            Back to Menu
-          </Link>
-        </div>
-      </div>
+        }
+      >
+        <SuccessContent />
+      </Suspense>
     </div>
   )
 }

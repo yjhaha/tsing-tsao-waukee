@@ -8,10 +8,9 @@
  * To switch providers for a new restaurant deployment, change one env var.
  */
 
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
 import { getDoorDashQuote, createDoorDashDelivery, getDoorDashDeliveryStatus } from './doordash'
 import { getUberQuote, createUberDelivery, getUberDeliveryStatus } from './uber'
-import type { DispatchParams } from './doordash'
 
 function provider(): 'doordash' | 'uber' {
   const p = (process.env.DELIVERY_PROVIDER ?? 'doordash').toLowerCase()
@@ -49,4 +48,4 @@ export async function getDeliveryStatus(
   return getDoorDashDeliveryStatus(deliveryId)
 }
 
-export type { DispatchParams }
+export type { DispatchParams, DeliveryAddress, DeliveryQuote, DeliveryDispatch }

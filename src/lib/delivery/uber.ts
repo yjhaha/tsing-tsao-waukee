@@ -12,9 +12,8 @@
  * Docs: https://developer.uber.com/docs/deliveries/overview
  */
 
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
 import { getDeliveryConfig } from './config'
-import { DispatchParams } from './doordash' // reuse the shared param type
 
 const AUTH_URL = 'https://auth.uber.com/oauth/v2/token'
 const API_BASE = 'https://api.uber.com/v1'

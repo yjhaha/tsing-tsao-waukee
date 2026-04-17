@@ -6,9 +6,10 @@ const resend = new Resend(process.env.RESEND_API_KEY!)
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const order = getOrder(params.sessionId)
+  const { sessionId } = await params
+  const order = getOrder(sessionId)
 
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
