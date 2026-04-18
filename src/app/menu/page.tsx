@@ -27,7 +27,7 @@ export default function MenuPage() {
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 bg-slate-950">
             {COLLAGE.map(({ src, alt }) => (
               <div key={src} className="relative overflow-hidden group cursor-pointer">
-                <Image src={src} alt={alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                <Image src={src} alt={alt} fill className="object-cover transition-transform duration-300 group-hover:scale-105" sizes="25vw" />
                 {/* Hover label */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300" />
                 <div className="absolute bottom-2 left-2 right-2 flex justify-center pointer-events-none">

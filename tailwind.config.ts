@@ -12,6 +12,7 @@ const config: Config = {
         brand: {
           gold: '#FFAE00',
           red: '#C41E3A',
+          crimson: '#C50832',
         },
       },
       fontFamily: {

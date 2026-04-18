@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import { useSearchParams } from 'next/navigation'
 import { FaSearchPlus, FaTimes, FaInfoCircle, FaFire } from 'react-icons/fa'
 import { useCart } from '@/context/CartContext'
+import type { OrderMode } from '@/context/CartContext'
 
 export interface MenuItemSize {
   name: string
@@ -33,10 +34,7 @@ export interface MenuCategory {
   items: MenuItem[]
 }
 
-const DELIVERY_URL = 'https://order.online/store/tsing-tsao-waukee-32583501/?delivery=true'
 const SPICE_CATEGORIES = new Set(['chicken', 'beef', 'pork', 'seafood'])
-
-type OrderMode = 'pickup' | 'delivery'
 
 function fmt(price: number) {
   return `$${price.toFixed(2)}`
@@ -163,18 +161,15 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
   const price = item.sizes ? item.sizes[selectedSizeIdx].price : (item.price ?? 0)
 
   const handleAdd = useCallback(() => {
-    if (orderMode === 'delivery') {
-      window.location.href = DELIVERY_URL
-      return
-    }
+    // Both pickup and delivery now use the internal cart flow
     const sizeName = item.sizes?.[selectedSizeIdx]?.name
     let cartName = sizeName ? `${item.name} (${sizeName})` : item.name
     if (spiceLevel > 0) cartName += ` · Spice ×${spiceLevel}`
     const cartId = [item.id, sizeName?.toLowerCase(), spiceLevel > 0 ? `s${spiceLevel}` : ''].filter(Boolean).join('-')
     addItem({ id: cartId, name: cartName, price, image: item.image })
-  }, [orderMode, item, selectedSizeIdx, spiceLevel, price, addItem])
+  }, [item, selectedSizeIdx, spiceLevel, price, addItem])
 
-  const showSpice = showSpiceLevel && orderMode === 'pickup'
+  const showSpice = showSpiceLevel
 
   return (
     <>
@@ -191,7 +186,7 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
           >
             {item.image ? (
               <>
-                <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" />
+                <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" sizes="64px" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
                   <FaSearchPlus className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow text-base" />
                 </div>
@@ -266,9 +261,8 @@ function CategorySection({ id, name, description, items, orderMode }: MenuCatego
 
 // ── Root component ──────────────────────────────────────────────────────────
 export default function MenuList({ categories }: { categories: MenuCategory[] }) {
-  const { count, total } = useCart()
+  const { count, total, orderMode, setOrderMode } = useCart()
   const searchParams = useSearchParams()
-  const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
   const [activeCategory, setActiveCategory] = useState<string>(categories[0]?.id ?? '')
   const navRef = useRef<HTMLDivElement>(null)
 
@@ -277,7 +271,7 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
     const mode = searchParams.get('mode')
     if (mode === 'delivery') setOrderMode('delivery')
     else if (mode === 'pickup') setOrderMode('pickup')
-  }, [searchParams])
+  }, [searchParams, setOrderMode])
 
   // Highlight nav pill as sections scroll into view
   useEffect(() => {
@@ -330,11 +324,6 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
               Delivery
             </button>
           </div>
-          {orderMode === 'delivery' && (
-            <p className="text-slate-500 text-xs mt-1.5 ml-1">
-              Tap any item to continue on our delivery partner&apos;s site.
-            </p>
-          )}
         </div>
 
         {/* Category nav */}
@@ -379,15 +368,20 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
         ))}
       </div>
 
-      {/* Floating cart bar */}
-      {orderMode === 'pickup' && count > 0 && (
+      {/* Floating cart bar — shown for both pickup and delivery */}
+      {count > 0 && (
         <div className="fixed bottom-0 left-0 right-0 lg:left-1/2 z-40 p-3 bg-slate-900/95 backdrop-blur border-t border-slate-700/60">
           <Link
             href="/cart"
             className="flex items-center justify-between w-full max-w-lg mx-auto bg-brand-gold text-slate-900 px-5 py-3.5 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
           >
             <span className="bg-amber-600/30 px-2.5 py-0.5 rounded-md text-sm font-bold min-w-[2rem] text-center">{count}</span>
-            <span>View Order</span>
+            <span>
+              View Order{' '}
+              <span className="font-medium opacity-70 text-sm">
+                ({orderMode === 'delivery' ? 'Delivery' : 'Pickup'})
+              </span>
+            </span>
             <span className="tabular-nums">{`$${total.toFixed(2)}`}</span>
           </Link>
         </div>
