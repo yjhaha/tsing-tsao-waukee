@@ -26,7 +26,7 @@ export default function HomePage() {
           <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 bg-slate-950">
             {COLLAGE.map(({ src, alt }) => (
               <div key={src} className="relative overflow-hidden">
-                <Image src={src} alt={alt} fill className="object-cover" />
+                <Image src={src} alt={alt} fill className="object-cover" sizes="25vw" />
               </div>
             ))}
           </div>
@@ -56,7 +56,7 @@ export default function HomePage() {
         <main className="w-full lg:w-1/2 min-h-screen p-4 space-y-3">
           {/* Mobile hero */}
           <div className="lg:hidden relative rounded-2xl overflow-hidden mb-2">
-            <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" />
+            <Image src="/images/menu/hero-image.png" alt="Tsing Tsao" fill className="object-cover" sizes="100vw" />
             <div className="absolute inset-0 bg-black/60" />
             <div className="relative z-10 flex flex-col items-center px-5 py-8">
               <h1 className="font-display italic font-bold text-3xl text-white text-center leading-tight mb-6">
@@ -93,7 +93,7 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 bg-slate-700">
-              <Image src="/images/storefront.jpg" alt="Tsing Tsao Waukee" fill className="object-cover" />
+              <Image src="/images/storefront.jpg" alt="Tsing Tsao Waukee" fill className="object-cover" sizes="(max-width: 640px) 96px, 112px" />
             </div>
           </div>
 

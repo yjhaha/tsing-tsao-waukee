@@ -4,14 +4,16 @@
     {
       "name": "Next.js Dev",
       "runtimeExecutable": "/Users/yjha/.nvm/versions/node/v20.20.2/bin/node",
-      "runtimeArgs": ["./node_modules/.bin/next", "dev", "-H", "0.0.0.0"],
-      "port": 3000
+      "runtimeArgs": ["/Users/yjha/Desktop/tsing-tsao-waukee/node_modules/.bin/next", "dev", "-H", "0.0.0.0"],
+      "cwd": "/Users/yjha/Desktop/tsing-tsao-waukee",
+      "autoPort": true
     },
     {
       "name": "Next.js Production",
       "runtimeExecutable": "/Users/yjha/.nvm/versions/node/v20.20.2/bin/node",
-      "runtimeArgs": ["./node_modules/.bin/next", "start", "-H", "0.0.0.0"],
-      "port": 3000
+      "runtimeArgs": ["/Users/yjha/Desktop/tsing-tsao-waukee/node_modules/.bin/next", "start", "-H", "0.0.0.0"],
+      "cwd": "/Users/yjha/Desktop/tsing-tsao-waukee",
+      "autoPort": true
     }
   ]
 }

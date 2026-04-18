@@ -186,7 +186,7 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
           >
             {item.image ? (
               <>
-                <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" />
+                <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" sizes="64px" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
                   <FaSearchPlus className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow text-base" />
                 </div>
@@ -324,11 +324,6 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
               Delivery
             </button>
           </div>
-          {orderMode === 'delivery' && (
-            <p className="text-slate-500 text-xs mt-1.5 ml-1">
-              Add items and enter your address at checkout. Delivery fee: $5.00.
-            </p>
-          )}
         </div>
 
         {/* Category nav */}
@@ -381,7 +376,12 @@ export default function MenuList({ categories }: { categories: MenuCategory[] })
             className="flex items-center justify-between w-full max-w-lg mx-auto bg-brand-gold text-slate-900 px-5 py-3.5 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
           >
             <span className="bg-amber-600/30 px-2.5 py-0.5 rounded-md text-sm font-bold min-w-[2rem] text-center">{count}</span>
-            <span>View Order</span>
+            <span>
+              View Order{' '}
+              <span className="font-medium opacity-70 text-sm">
+                ({orderMode === 'delivery' ? 'Delivery' : 'Pickup'})
+              </span>
+            </span>
             <span className="tabular-nums">{`$${total.toFixed(2)}`}</span>
           </Link>
         </div>

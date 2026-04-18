@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DeliveryAddress } from '@/lib/delivery/types'
+import {
+  FaClock,
+  FaMotorcycle,
+  FaShoppingBag,
+  FaCheckCircle,
+  FaExclamationTriangle,
+} from 'react-icons/fa'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface OrderItem {
@@ -27,13 +34,13 @@ interface Order {
 type OrderStatus = 'new' | 'active' | 'ready'
 
 // ── Delivery status display config ───────────────────────────────────────────
-const DELIVERY_STATUS_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  created: { label: 'Awaiting driver', icon: '⏳', color: 'bg-slate-600 text-slate-200' },
-  driver_assigned: { label: 'Driver assigned', icon: '🛵', color: 'bg-blue-700 text-blue-100' },
-  picked_up: { label: 'Picked up', icon: '🥡', color: 'bg-amber-700 text-amber-100' },
-  delivered: { label: 'Delivered', icon: '✅', color: 'bg-green-700 text-green-100' },
-  cancelled: { label: 'Cancelled', icon: '⚠️', color: 'bg-red-700 text-red-100' },
-  failed: { label: 'Failed', icon: '⚠️', color: 'bg-red-700 text-red-100' },
+const DELIVERY_STATUS_CONFIG: Record<string, { label: string; icon: JSX.Element; color: string }> = {
+  created: { label: 'Awaiting driver', icon: <FaClock />, color: 'bg-slate-600 text-slate-200' },
+  driver_assigned: { label: 'Driver assigned', icon: <FaMotorcycle />, color: 'bg-brand-gold text-slate-900' },
+  picked_up: { label: 'Picked up', icon: <FaShoppingBag />, color: 'bg-amber-700 text-amber-100' },
+  delivered: { label: 'Delivered', icon: <FaCheckCircle />, color: 'bg-green-700 text-green-100' },
+  cancelled: { label: 'Cancelled', icon: <FaExclamationTriangle />, color: 'bg-red-700 text-red-100' },
+  failed: { label: 'Failed', icon: <FaExclamationTriangle />, color: 'bg-red-700 text-red-100' },
 }
 
 // ── Audio chime ──────────────────────────────────────────────────────────────
@@ -161,7 +168,7 @@ function DeliveryStatusBadge({ status, trackingUrl }: { status?: string; trackin
           href={trackingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors underline"
+          className="text-[10px] font-bold text-brand-gold hover:text-yellow-300 transition-colors underline"
           onClick={e => e.stopPropagation()}
         >
           Track driver →
@@ -196,7 +203,7 @@ function OrderCard({
     <div className={`rounded-2xl border flex flex-col gap-3 p-4 transition-colors ${
       status === 'new'
         ? isDelivery
-          ? 'bg-slate-800 border-blue-500'
+          ? 'bg-slate-800 border-brand-gold'
           : 'bg-slate-800 border-brand-gold'
         : status === 'ready'
         ? 'bg-slate-900 border-slate-700 opacity-60'
@@ -209,7 +216,7 @@ function OrderCard({
             <span className="text-white font-bold text-lg">#{shortId}</span>
             {status === 'new' && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                isDelivery ? 'bg-blue-500 text-white' : 'bg-brand-gold text-slate-900'
+                isDelivery ? 'bg-brand-gold text-slate-900' : 'bg-brand-gold text-slate-900'
               }`}>
                 New
               </span>
@@ -220,10 +227,10 @@ function OrderCard({
               </span>
             )}
             {/* Delivery/Pickup badge */}
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-              isDelivery ? 'bg-blue-900 text-blue-300' : 'bg-slate-700 text-slate-400'
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+              isDelivery ? 'bg-brand-gold/20 text-brand-gold' : 'bg-slate-700 text-slate-400'
             }`}>
-              {isDelivery ? '🛵 Delivery' : '🥡 Pickup'}
+              {isDelivery ? <><FaMotorcycle /> Delivery</> : <><FaShoppingBag /> Pickup</>}
             </span>
           </div>
           {status !== 'ready' && isOverdue(order.createdAt) ? (
@@ -440,13 +447,13 @@ function KitchenDisplay() {
             </span>
           )}
           {deliveryCount > 0 && (
-            <span className="bg-blue-700 text-blue-100 text-xs font-bold px-2 py-0.5 rounded-full">
-              🛵 {deliveryCount} delivery
+            <span className="inline-flex items-center gap-1 bg-brand-gold text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
+              <FaMotorcycle /> {deliveryCount} delivery
             </span>
           )}
           {pickupCount > 0 && (
-            <span className="bg-slate-700 text-slate-200 text-xs font-bold px-2 py-0.5 rounded-full">
-              🥡 {pickupCount} pickup
+            <span className="inline-flex items-center gap-1 bg-slate-700 text-slate-200 text-xs font-bold px-2 py-0.5 rounded-full">
+              <FaShoppingBag /> {pickupCount} pickup
             </span>
           )}
         </div>

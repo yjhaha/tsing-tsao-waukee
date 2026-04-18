@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import type { DeliveryAddress } from '@/lib/delivery/types'
+import { FaMotorcycle, FaShoppingBag, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
 
 interface OrderDetails {
   sessionId: string
@@ -25,13 +26,13 @@ function formatAddress(a: DeliveryAddress): string {
 // ── Delivery Tracking Panel ───────────────────────────────────────────────────
 
 function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
-  const statusLabels: Record<string, { label: string; icon: string; color: string }> = {
-    created:         { label: 'Order confirmed — driver will be assigned soon', icon: '✅', color: 'text-slate-300' },
-    driver_assigned: { label: 'Driver assigned and heading to restaurant',       icon: '🛵', color: 'text-blue-400' },
-    picked_up:       { label: 'Your food has been picked up!',                   icon: '🥡', color: 'text-brand-gold' },
-    delivered:       { label: 'Delivered!',                                      icon: '🎉', color: 'text-green-400' },
-    cancelled:       { label: 'Delivery was cancelled — please contact us',      icon: '⚠️', color: 'text-red-400' },
-    failed:          { label: 'Delivery issue — please contact us',              icon: '⚠️', color: 'text-red-400' },
+  const statusLabels: Record<string, { label: string; icon: JSX.Element; color: string }> = {
+    created:         { label: 'Order confirmed — driver will be assigned soon', icon: <FaCheckCircle />,       color: 'text-slate-300' },
+    driver_assigned: { label: 'Driver assigned and heading to restaurant',       icon: <FaMotorcycle />,        color: 'text-brand-gold' },
+    picked_up:       { label: 'Your food has been picked up!',                   icon: <FaShoppingBag />,       color: 'text-brand-gold' },
+    delivered:       { label: 'Delivered!',                                      icon: <FaCheckCircle />,       color: 'text-green-400' },
+    cancelled:       { label: 'Delivery was cancelled — please contact us',      icon: <FaExclamationTriangle />, color: 'text-red-400' },
+    failed:          { label: 'Delivery issue — please contact us',              icon: <FaExclamationTriangle />, color: 'text-red-400' },
   }
 
   const current = order.deliveryStatus
@@ -41,7 +42,7 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   return (
     <div className="mt-8 bg-slate-800 rounded-2xl p-5 text-left">
       <h2 className="text-white font-semibold text-base mb-4 flex items-center gap-2">
-        🛵 <span>Delivery Status</span>
+        <FaMotorcycle className="text-brand-gold" /> <span>Delivery Status</span>
       </h2>
 
       {order.deliveryAddress && (
@@ -61,7 +62,7 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
           href={order.deliveryTrackingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full py-3 text-center bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors text-sm"
+          className="block w-full py-3 text-center bg-brand-gold hover:bg-yellow-400 text-slate-900 font-bold rounded-xl transition-colors text-sm"
         >
           Track on Map →
         </a>

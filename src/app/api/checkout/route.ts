@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
 
     // ── Build line items ─────────────────────────────────────────────────────
-    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = items.map(item => ({
+    const lineItems: NonNullable<Stripe.Checkout.SessionCreateParams['line_items']> = items.map(item => ({
       quantity: item.quantity,
       price_data: {
         currency: 'usd',

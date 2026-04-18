@@ -5,7 +5,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import { useCart } from '@/context/CartContext'
-import type { DeliveryAddress } from '@/lib/delivery/types'
+import type { DeliveryAddress, DeliveryQuote } from '@/lib/delivery/types'
+import {
+  FaMapMarkerAlt,
+  FaMotorcycle,
+  FaShoppingBag,
+  FaTimes,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaInfoCircle,
+} from 'react-icons/fa'
 
 function fmt(price: number) {
   return `$${price.toFixed(2)}`
@@ -20,9 +29,10 @@ interface AddressFormProps {
   validating: boolean
   error: string | null
   quoted: boolean
+  quote: DeliveryQuote | null
 }
 
-function AddressForm({ address, onChange, onValidate, validating, error, quoted }: AddressFormProps) {
+function AddressForm({ address, onChange, onValidate, validating, error, quoted, quote }: AddressFormProps) {
   const prefix = useId()
 
   function set(field: keyof DeliveryAddress, value: string) {
@@ -39,7 +49,7 @@ function AddressForm({ address, onChange, onValidate, validating, error, quoted 
   return (
     <div className="bg-slate-800 rounded-xl p-4 mb-4">
       <h2 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-        <span className="text-base">📍</span> Delivery Address
+        <FaMapMarkerAlt className="text-brand-gold text-sm shrink-0" /> Delivery Address
       </h2>
 
       <div className="space-y-2.5">
@@ -129,14 +139,31 @@ function AddressForm({ address, onChange, onValidate, validating, error, quoted 
           type="button"
           onClick={onValidate}
           disabled={validating}
-          className="w-full py-2.5 rounded-xl bg-slate-600 hover:bg-slate-500 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2.5 rounded-xl bg-slate-600 hover:bg-slate-500 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {validating ? 'Checking address…' : quoted ? 'Re-check Address' : 'Check Delivery Availability'}
+          {validating
+            ? 'Checking address…'
+            : quoted
+            ? 'Re-check Address'
+            : 'Check Delivery Availability'}
         </button>
 
+        {/* Success state */}
+        {!validating && !error && quoted && quote && (
+          <div className="flex items-start gap-2.5 px-4 py-3 bg-green-900/30 border border-green-700/40 rounded-xl text-green-300 text-sm">
+            <FaCheckCircle className="shrink-0 text-green-400 mt-0.5" />
+            <span>
+              Delivery available
+              {quote.dropoffEtaMinutes ? ` · Est. ${quote.dropoffEtaMinutes} min` : ''}
+            </span>
+          </div>
+        )}
+
+        {/* Error state */}
         {error && (
-          <div className="px-4 py-3 bg-red-900/40 border border-red-700/50 rounded-xl text-red-300 text-sm">
-            {error}
+          <div className="flex items-start gap-2.5 px-4 py-3 bg-red-900/40 border border-red-700/50 rounded-xl text-red-300 text-sm">
+            <FaExclamationTriangle className="shrink-0 text-red-400 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
       </div>
@@ -238,13 +265,13 @@ export default function CartPage() {
       <div className="max-w-lg mx-auto px-4 pt-20 pb-12">
         <h1 className="font-display italic text-3xl text-white mb-1">Your Order</h1>
         {isDelivery && (
-          <p className="text-blue-400 text-xs font-semibold uppercase tracking-wide mb-5">
-            🛵 Delivery
+          <p className="text-brand-gold text-xs font-semibold uppercase tracking-wide mb-5 flex items-center gap-1.5">
+            <FaMotorcycle className="text-sm" /> Delivery
           </p>
         )}
         {!isDelivery && (
-          <p className="text-brand-gold text-xs font-semibold uppercase tracking-wide mb-5">
-            🥡 Pickup
+          <p className="text-brand-gold text-xs font-semibold uppercase tracking-wide mb-5 flex items-center gap-1.5">
+            <FaShoppingBag className="text-xs" /> Pickup
           </p>
         )}
 
@@ -266,7 +293,7 @@ export default function CartPage() {
                 <div key={item.id} className="flex items-center gap-3 bg-slate-800 rounded-xl p-3">
                   {item.image && (
                     <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-700">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" />
+                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="56px" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -294,15 +321,23 @@ export default function CartPage() {
                     </span>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="ml-1 text-slate-600 hover:text-red-400 transition-colors text-sm"
+                      className="ml-1 text-slate-600 hover:text-red-400 transition-colors"
                       aria-label="Remove item"
                     >
-                      ✕
+                      <FaTimes className="text-xs" />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Delivery info hint — shown before address entry */}
+            {isDelivery && !deliveryQuote && (
+              <div className="mb-3 flex items-start gap-2.5 px-4 py-3 bg-slate-800 border border-slate-600/60 rounded-xl text-slate-400 text-sm">
+                <FaInfoCircle className="shrink-0 text-slate-500 mt-0.5" />
+                <span>Enter your address below and check availability before checking out.</span>
+              </div>
+            )}
 
             {/* Delivery address form */}
             {isDelivery && (
@@ -313,6 +348,7 @@ export default function CartPage() {
                 validating={validating}
                 error={addressError}
                 quoted={!!deliveryQuote}
+                quote={deliveryQuote}
               />
             )}
 
@@ -333,11 +369,18 @@ export default function CartPage() {
                         : '—'}
                     </span>
                   </div>
-                  {deliveryQuote && (
-                    <p className="text-slate-600 text-[11px] mb-1 pl-0">
-                      Restaurant covers ${(deliveryQuote.restaurantFeeCents / 100).toFixed(2)} · You pay ${(deliveryQuote.customerFeeCents / 100).toFixed(2)}
-                    </p>
-                  )}
+                  {deliveryQuote && (() => {
+                    // DoorDash typically charges ~$5.99 delivery + 15% service fee
+                    const ddFees = 5.99 + total * 0.15
+                    const ourFee = deliveryQuote.customerFeeCents / 100
+                    const savings = Math.max(0, ddFees - ourFee)
+                    return savings > 0 ? (
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-slate-400">Est. savings vs. DoorDash</span>
+                        <span className="text-green-400 font-semibold tabular-nums">~{fmt(savings)}</span>
+                      </div>
+                    ) : null
+                  })()}
                 </>
               )}
 
@@ -348,13 +391,6 @@ export default function CartPage() {
                 </span>
               </div>
             </div>
-
-            {/* Delivery not-ready hint */}
-            {isDelivery && !deliveryQuote && (
-              <div className="mb-4 px-4 py-3 bg-blue-900/30 border border-blue-700/40 rounded-xl text-blue-300 text-sm">
-                Enter your delivery address above and click "Check Delivery Availability" before checking out.
-              </div>
-            )}
 
             {/* Checkout error */}
             {checkoutError && (

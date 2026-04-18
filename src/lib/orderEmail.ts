@@ -62,7 +62,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
     .join('')
 
   const isDelivery = orderType === 'delivery'
-  const orderTypeBadgeColor = isDelivery ? '#3b82f6' : '#D4AF37'
+  const orderTypeBadgeColor = isDelivery ? '#FFAE00' : '#D4AF37'
   const orderTypeLabel = formatOrderType(orderType)
 
   const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
@@ -89,7 +89,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
         <td style="padding: 20px 36px;">
           <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.1em;">Track your delivery</p>
           <a href="${deliveryTrackingUrl}"
-             style="display:inline-block;background:#3b82f6;color:#fff;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">
+             style="display:inline-block;background:#FFAE00;color:#1e293b;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">
             Live Tracking →
           </a>
           <p style="margin:10px 0 0;font-size:12px;color:#64748b;">Or copy: ${deliveryTrackingUrl}</p>
