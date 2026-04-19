@@ -113,21 +113,21 @@ async function handleWebhook(payload: DdWebhookPayload) {
   const restaurantPhone = process.env.RESTAURANT_PHONE ?? '(515) 830-9600'
 
   const trackingSection = order.deliveryTrackingUrl
-    ? `<p style="margin:16px 0"><a href="${order.deliveryTrackingUrl}" style="display:inline-block;background:#D4AF37;color:#0f172a;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">Track your delivery</a></p>`
+    ? `<p style="margin:16px 0"><a href="${order.deliveryTrackingUrl}" style="display:inline-block;background:#D4AF37;color:#180008;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">Track your delivery</a></p>`
     : ''
 
   await resend.emails.send({
     from: `${restaurantName} <orders@tsingtsao.com>`,
     to: order.customerEmail,
     subject: notification.subject,
-    html: `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#0f172a;color:#e2e8f0;padding:40px 16px">
-      <div style="max-width:480px;margin:0 auto;background:#1e293b;border-radius:16px;padding:32px">
+    html: `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#180008;color:#f5dce2;padding:40px 16px">
+      <div style="max-width:480px;margin:0 auto;background:#27000f;border-radius:16px;padding:32px">
         <p style="font-size:13px;letter-spacing:0.2em;color:#D4AF37;text-transform:uppercase;margin:0 0 8px">${restaurantName}</p>
         <h2 style="margin:0 0 16px;color:#fff">${notification.subject}</h2>
-        <p style="color:#94a3b8;line-height:1.6">${notification.body}</p>
+        <p style="color:#c47888;line-height:1.6">${notification.body}</p>
         ${trackingSection}
-        <hr style="border-color:#334155;margin:24px 0"/>
-        <p style="font-size:13px;color:#64748b">Questions? Call us at <a href="tel:${restaurantPhone}" style="color:#D4AF37">${restaurantPhone}</a></p>
+        <hr style="border-color:#560020;margin:24px 0"/>
+        <p style="font-size:13px;color:#8f4a58">Questions? Call us at <a href="tel:${restaurantPhone}" style="color:#D4AF37">${restaurantPhone}</a></p>
       </div>
     </body></html>`,
     text: `${notification.subject}\n\n${notification.body}\n\n${order.deliveryTrackingUrl ? `Track your delivery: ${order.deliveryTrackingUrl}\n\n` : ''}Questions? Call ${restaurantPhone}`,

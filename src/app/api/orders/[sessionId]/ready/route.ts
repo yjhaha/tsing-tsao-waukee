@@ -29,32 +29,32 @@ export async function POST(
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#0f172a;font-family:system-ui,sans-serif;color:#f1f5f9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#180008;font-family:system-ui,sans-serif;color:#feeaed;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#180008;padding:40px 20px;">
     <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#1e293b;border-radius:16px;overflow:hidden;">
+      <table width="100%" style="max-width:520px;background:#27000f;border-radius:16px;overflow:hidden;">
         <tr><td style="background:#f59e0b;padding:24px 32px;">
           <p style="margin:0;font-size:13px;color:#1c1917;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Tsing Tsao Waukee</p>
           <h1 style="margin:8px 0 0;font-size:26px;color:#0c0a09;font-weight:800;">Your order is ready${name}! 🥡</h1>
         </td></tr>
         <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 20px;color:#94a3b8;font-size:14px;">Order <strong style="color:#f1f5f9;">#${shortId}</strong> is ready for <strong style="color:#f1f5f9;">pickup</strong> at the counter.</p>
+          <p style="margin:0 0 20px;color:#c47888;font-size:14px;">Order <strong style="color:#feeaed;">#${shortId}</strong> is ready for <strong style="color:#feeaed;">pickup</strong> at the counter.</p>
           <table width="100%" style="border-collapse:collapse;">
             ${order.items.map(i => `
             <tr>
-              <td style="padding:8px 0;border-top:1px solid #334155;color:#e2e8f0;font-size:14px;">
+              <td style="padding:8px 0;border-top:1px solid #560020;color:#f5dce2;font-size:14px;">
                 <span style="color:#f59e0b;font-weight:700;">${i.quantity}×</span> ${i.name}
               </td>
-              <td style="padding:8px 0;border-top:1px solid #334155;color:#94a3b8;font-size:13px;text-align:right;">
+              <td style="padding:8px 0;border-top:1px solid #560020;color:#c47888;font-size:13px;text-align:right;">
                 $${(i.amount_total / 100).toFixed(2)}
               </td>
             </tr>`).join('')}
             <tr>
-              <td style="padding:12px 0 0;color:#f1f5f9;font-weight:700;font-size:15px;">Total</td>
+              <td style="padding:12px 0 0;color:#feeaed;font-weight:700;font-size:15px;">Total</td>
               <td style="padding:12px 0 0;color:#f59e0b;font-weight:700;font-size:15px;text-align:right;">$${(order.amountTotal / 100).toFixed(2)}</td>
             </tr>
           </table>
-          <p style="margin:28px 0 0;color:#64748b;font-size:12px;text-align:center;">160 SE Laurel St, Waukee, IA 50263 · (515) 490-2888</p>
+          <p style="margin:28px 0 0;color:#8f4a58;font-size:12px;text-align:center;">160 SE Laurel St, Waukee, IA 50263 · (515) 490-2888</p>
         </td></tr>
       </table>
     </td></tr>
