@@ -31,6 +31,19 @@ export interface DeliveryDispatch {
   externalDeliveryId: string
   trackingUrl: string
   status: DeliveryStatus
+  /** ISO-8601 estimated dropoff time, if returned by the provider at dispatch. */
+  dropoffEtaAt?: string
+}
+
+/** Live status returned by the tracking proxy — includes courier position. */
+export interface LiveDeliveryStatus {
+  status: string
+  trackingUrl: string
+  courierLat?: number
+  courierLng?: number
+  courierName?: string
+  /** ISO-8601 estimated dropoff time. */
+  dropoffEtaAt?: string
 }
 
 export type DeliveryStatus =

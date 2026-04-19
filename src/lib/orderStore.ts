@@ -11,15 +11,22 @@ export interface KitchenOrder {
   amountTotal: number
   // ── Delivery fields (only set when orderType === 'delivery') ──────────────
   deliveryAddress?: DeliveryAddress
-  /** DoorDash external_delivery_id — used to correlate webhook updates. */
+  /** Provider delivery ID — used to correlate webhook updates. */
   externalDeliveryId?: string
   deliveryTrackingUrl?: string
   deliveryStatus?: DeliveryStatus
+  /** ISO-8601 estimated dropoff time from the provider. */
+  dropoffEtaAt?: string
+  /** Live courier latitude (updated via webhook or polling). */
+  courierLat?: number
+  /** Live courier longitude (updated via webhook or polling). */
+  courierLng?: number
+  courierName?: string
 }
 
 const store = new Map<string, KitchenOrder>()
 
-/** Index: externalDeliveryId → sessionId (for DoorDash webhook lookups). */
+/** Index: externalDeliveryId → sessionId (for webhook lookups). */
 const deliveryIndex = new Map<string, string>()
 
 export function saveOrder(order: KitchenOrder) {
@@ -37,19 +44,14 @@ export function getOrder(sessionId: string): KitchenOrder | undefined {
   return store.get(sessionId)
 }
 
-/**
- * Look up an order by its DoorDash externalDeliveryId.
- * Used by the DoorDash webhook handler.
- */
+/** Look up an order by its provider externalDeliveryId (for webhook handlers). */
 export function getOrderByDeliveryId(externalDeliveryId: string): KitchenOrder | undefined {
   const sessionId = deliveryIndex.get(externalDeliveryId)
   if (!sessionId) return undefined
   return store.get(sessionId)
 }
 
-/**
- * Update delivery status after a DoorDash webhook fires.
- */
+/** Update delivery status after a webhook fires. */
 export function updateOrderDeliveryStatus(
   externalDeliveryId: string,
   status: string,
@@ -57,16 +59,34 @@ export function updateOrderDeliveryStatus(
 ) {
   const sessionId = deliveryIndex.get(externalDeliveryId)
   if (!sessionId) return
-
   const order = store.get(sessionId)
   if (!order) return
-
-  const updated: KitchenOrder = {
+  store.set(sessionId, {
     ...order,
     deliveryStatus: status as DeliveryStatus,
     ...(trackingUrl ? { deliveryTrackingUrl: trackingUrl } : {}),
-  }
-  store.set(sessionId, updated)
+  })
+}
+
+/** Update live courier location + ETA (from webhook or polling). */
+export function updateOrderCourierLocation(
+  externalDeliveryId: string,
+  courierLat: number,
+  courierLng: number,
+  courierName?: string,
+  dropoffEtaAt?: string,
+) {
+  const sessionId = deliveryIndex.get(externalDeliveryId)
+  if (!sessionId) return
+  const order = store.get(sessionId)
+  if (!order) return
+  store.set(sessionId, {
+    ...order,
+    courierLat,
+    courierLng,
+    ...(courierName ? { courierName } : {}),
+    ...(dropoffEtaAt ? { dropoffEtaAt } : {}),
+  })
 }
 
 export function isEmpty(): boolean {

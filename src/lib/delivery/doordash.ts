@@ -14,7 +14,7 @@
  */
 
 import crypto from 'crypto'
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams, LiveDeliveryStatus } from './types'
 import { getDeliveryConfig } from './config'
 
 const BASE_URL =
@@ -187,20 +187,32 @@ export async function createDoorDashDelivery(
   }
 }
 
-// ── Delivery status fetch ─────────────────────────────────────────────────────
+// ── Delivery status fetch (with live dasher location + ETA) ──────────────────
 
 interface DdDeliveryStatusResponse {
   delivery_status: string
   tracking_url: string
+  dropoff_time_estimated?: string  // ISO-8601
+  dasher?: {
+    name?: string
+    location?: { lat: number; lng: number }
+  }
 }
 
 /** Fetch the latest status of a delivery (for polling). */
 export async function getDoorDashDeliveryStatus(
   externalDeliveryId: string,
-): Promise<{ status: string; trackingUrl: string }> {
+): Promise<LiveDeliveryStatus> {
   const raw = await ddFetch<DdDeliveryStatusResponse>(
     'GET',
     `/drive/v2/deliveries/${encodeURIComponent(externalDeliveryId)}`,
   )
-  return { status: raw.delivery_status, trackingUrl: raw.tracking_url }
+  return {
+    status: raw.delivery_status,
+    trackingUrl: raw.tracking_url,
+    courierLat: raw.dasher?.location?.lat,
+    courierLng: raw.dasher?.location?.lng,
+    courierName: raw.dasher?.name,
+    dropoffEtaAt: raw.dropoff_time_estimated,
+  }
 }

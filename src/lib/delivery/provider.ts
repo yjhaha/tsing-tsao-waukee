@@ -8,7 +8,7 @@
  * To switch providers for a new restaurant deployment, change one env var.
  */
 
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams, LiveDeliveryStatus } from './types'
 import { getDoorDashQuote, createDoorDashDelivery, getDoorDashDeliveryStatus } from './doordash'
 import { getUberQuote, createUberDelivery, getUberDeliveryStatus } from './uber'
 
@@ -38,14 +38,14 @@ export async function createDelivery(params: DispatchParams): Promise<DeliveryDi
   return createDoorDashDelivery(params)
 }
 
-/** Fetch the latest status of a live delivery. */
+/** Fetch the latest status + live courier position of a delivery. */
 export async function getDeliveryStatus(
   deliveryId: string,
-): Promise<{ status: string; trackingUrl: string }> {
+): Promise<LiveDeliveryStatus> {
   if (provider() === 'uber') {
     return getUberDeliveryStatus(deliveryId)
   }
   return getDoorDashDeliveryStatus(deliveryId)
 }
 
-export type { DispatchParams, DeliveryAddress, DeliveryQuote, DeliveryDispatch }
+export type { DispatchParams, DeliveryAddress, DeliveryQuote, DeliveryDispatch, LiveDeliveryStatus }

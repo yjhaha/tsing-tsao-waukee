@@ -95,12 +95,13 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
       amount_total: li.amount_total,
     }))
 
-  // ── Dispatch DoorDash delivery ─────────────────────────────────────────────
+  // ── Dispatch delivery ─────────────────────────────────────────────────────
   let deliveryTrackingUrl: string | undefined
+  let dropoffEtaAt: string | undefined
 
   if (isDelivery && deliveryAddress && externalDeliveryId) {
     try {
-      console.log(`[webhook] Dispatching DoorDash delivery for session ${session.id}`)
+      console.log(`[webhook] Dispatching delivery for session ${session.id}`)
       const dispatch = await createDelivery({
         externalDeliveryId,
         dropoffAddress: deliveryAddress,
@@ -110,12 +111,11 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
         orderValueCents: session.amount_total ?? 0,
       })
       deliveryTrackingUrl = dispatch.trackingUrl
-      console.log(`[webhook] DoorDash delivery created: ${dispatch.externalDeliveryId}, tracking: ${dispatch.trackingUrl}`)
+      dropoffEtaAt = dispatch.dropoffEtaAt
+      console.log(`[webhook] Delivery created: ${dispatch.externalDeliveryId}, tracking: ${dispatch.trackingUrl}`)
     } catch (err) {
       // Log but don't throw — customer paid, we must not leave them unconfirmed.
-      // The restaurant should be alerted so they can manually arrange delivery.
-      console.error('[webhook] DoorDash dispatch failed:', err)
-      // Fall through and still save the order + send confirmation without tracking
+      console.error('[webhook] Delivery dispatch failed:', err)
     }
   }
 
@@ -133,6 +133,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     externalDeliveryId,
     deliveryTrackingUrl,
     deliveryStatus: isDelivery ? 'created' : undefined,
+    dropoffEtaAt,
   })
 
   // ── Send confirmation email ────────────────────────────────────────────────
@@ -149,6 +150,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     sessionId: session.id,
     deliveryAddress,
     deliveryTrackingUrl,
+    dropoffEtaAt,
   }
 
   const { error } = await resend.emails.send({

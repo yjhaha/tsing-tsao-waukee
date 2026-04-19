@@ -17,6 +17,27 @@ export interface OrderEmailData {
   // Delivery extras
   deliveryAddress?: DeliveryAddress
   deliveryTrackingUrl?: string
+  /** ISO-8601 estimated dropoff time — shown in email if available. */
+  dropoffEtaAt?: string
+}
+
+/** Builds a Google Maps Static API URL for the email map image. */
+function buildEmailMapUrl(
+  restaurantLat: number,
+  restaurantLng: number,
+  customerAddress: string,
+): string | null {
+  const key = process.env.GOOGLE_MAPS_KEY
+  if (!key) return null
+  const restaurantMarker = `color:0xFFAE00|label:R|${restaurantLat},${restaurantLng}`
+  const customerMarker   = `color:0x22c55e|label:C|${customerAddress}`
+  return (
+    `https://maps.googleapis.com/maps/api/staticmap` +
+    `?size=520x200&scale=2` +
+    `&markers=${encodeURIComponent(restaurantMarker)}` +
+    `&markers=${encodeURIComponent(customerMarker)}` +
+    `&key=${key}`
+  )
 }
 
 function formatCurrency(cents: number): string {
@@ -41,7 +62,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
   const {
     customerEmail, customerName, customerPhone,
     orderType, items, amountTotal, sessionId,
-    deliveryAddress, deliveryTrackingUrl,
+    deliveryAddress, deliveryTrackingUrl, dropoffEtaAt,
   } = data
 
   const itemRows = items
@@ -71,6 +92,23 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
   const restaurantCity = process.env.RESTAURANT_ADDRESS_CITY ?? 'Waukee'
   const restaurantState = process.env.RESTAURANT_ADDRESS_STATE ?? 'IA'
   const restaurantZip = process.env.RESTAURANT_ADDRESS_ZIP ?? '50263'
+  const restaurantLat = parseFloat(process.env.RESTAURANT_LAT ?? '41.6132')
+  const restaurantLng = parseFloat(process.env.RESTAURANT_LNG ?? '-93.8692')
+
+  // ETA text (e.g. "~35 min · 3:42 PM")
+  const etaText = (() => {
+    if (!dropoffEtaAt) return null
+    const diffMs = new Date(dropoffEtaAt).getTime() - Date.now()
+    if (diffMs <= 0) return null
+    const mins = Math.round(diffMs / 60_000)
+    const time = new Date(dropoffEtaAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    return `~${mins} min · ${time}`
+  })()
+
+  // Static map image URL (requires GOOGLE_MAPS_KEY env var)
+  const mapImageUrl = isDelivery && deliveryAddress
+    ? buildEmailMapUrl(restaurantLat, restaurantLng, formatDeliveryAddress(deliveryAddress))
+    : null
 
   // Delivery-specific blocks
   const deliveryAddressBlock = isDelivery && deliveryAddress
@@ -83,27 +121,51 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
       </tr>`
     : ''
 
+  const mapBlock = mapImageUrl
+    ? `<tr>
+        <td style="padding: 0 36px 20px;">
+          <img src="${mapImageUrl}" alt="Delivery route" width="488" style="width:100%;border-radius:10px;display:block;" />
+          <p style="margin:8px 0 0;font-size:11px;color:#64748b;text-align:center;">
+            🟡 Restaurant &nbsp;·&nbsp; 🟢 Your address
+          </p>
+        </td>
+      </tr>`
+    : ''
+
+  const etaBlock = etaText
+    ? `<tr>
+        <td style="padding: 0 36px 16px;">
+          <p style="margin:0;font-size:14px;color:#FFAE00;font-weight:600;">
+            ⏱ Estimated arrival: ${etaText}
+          </p>
+        </td>
+      </tr>`
+    : ''
+
   const trackingBlock = isDelivery && deliveryTrackingUrl
     ? `
+      ${mapBlock}
+      ${etaBlock}
       <tr>
-        <td style="padding: 20px 36px;">
-          <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#e8b0bc;text-transform:uppercase;letter-spacing:0.1em;">Track your delivery</p>
+        <td style="padding: 0 36px 20px;">
+          <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.1em;">Track your delivery</p>
           <a href="${deliveryTrackingUrl}"
-             style="display:inline-block;background:#FFAE00;color:#180008;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">
+             style="display:inline-block;background:#FFAE00;color:#1e293b;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">
             Live Tracking →
           </a>
-          <p style="margin:10px 0 0;font-size:12px;color:#8f4a58;">Or copy: ${deliveryTrackingUrl}</p>
+          <p style="margin:10px 0 0;font-size:12px;color:#64748b;">Or copy: ${deliveryTrackingUrl}</p>
         </td>
       </tr>
-      <tr><td style="padding: 0 36px;"><hr style="border:none;border-top:1px solid #560020;" /></td></tr>`
+      <tr><td style="padding: 0 36px;"><hr style="border:none;border-top:1px solid #334155;" /></td></tr>`
     : isDelivery
     ? `
+      ${mapBlock}
       <tr>
         <td style="padding: 16px 36px;">
-          <p style="margin:0;font-size:13px;color:#c47888;">A driver will be assigned shortly. You'll receive a tracking link via email once your driver is on the way.</p>
+          <p style="margin:0;font-size:13px;color:#94a3b8;">A driver will be assigned shortly. You'll receive a tracking link via email once your driver is on the way.</p>
         </td>
       </tr>
-      <tr><td style="padding: 0 36px;"><hr style="border:none;border-top:1px solid #560020;" /></td></tr>`
+      <tr><td style="padding: 0 36px;"><hr style="border:none;border-top:1px solid #334155;" /></td></tr>`
     : ''
 
   const locationBlock = isDelivery

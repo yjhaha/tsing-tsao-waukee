@@ -9,14 +9,21 @@
  *   UBER_CLIENT_SECRET
  *   UBER_CUSTOMER_ID   ← your organization/customer UUID from direct.uber.com
  *
+ * Optional env vars:
+ *   UBER_API_BASE      ← override base URL; set to https://sandbox-api.uber.com/v1 for testing
+ *   UBER_WEBHOOK_SECRET ← if set, webhook signatures are verified
+ *
  * Docs: https://developer.uber.com/docs/deliveries/overview
  */
 
-import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams } from './types'
+import { DeliveryAddress, DeliveryQuote, DeliveryDispatch, DispatchParams, LiveDeliveryStatus } from './types'
 import { getDeliveryConfig } from './config'
 
 const AUTH_URL = 'https://auth.uber.com/oauth/v2/token'
-const API_BASE = 'https://api.uber.com/v1'
+// UBER_API_BASE lets you switch between sandbox and production without code changes:
+//   sandbox:    UBER_API_BASE=https://sandbox-api.uber.com/v1
+//   production: omit (defaults to https://api.uber.com/v1)
+const API_BASE = process.env.UBER_API_BASE ?? 'https://api.uber.com/v1'
 
 // ── Token cache ───────────────────────────────────────────────────────────────
 
@@ -146,6 +153,7 @@ interface UberDeliveryResponse {
   id: string
   status: string
   tracking_url: string
+  dropoff_eta?: number  // Unix timestamp (seconds)
 }
 
 export async function createUberDelivery(
@@ -178,23 +186,53 @@ export async function createUberDelivery(
     externalDeliveryId: raw.id,
     trackingUrl: raw.tracking_url,
     status: (raw.status as DeliveryDispatch['status']) ?? 'created',
+    dropoffEtaAt: raw.dropoff_eta ? new Date(raw.dropoff_eta * 1000).toISOString() : undefined,
   }
 }
 
-// ── Status fetch ──────────────────────────────────────────────────────────────
+// ── Status fetch (with live courier location + ETA) ───────────────────────────
 
 interface UberDeliveryStatusResponse {
   id: string
   status: string
   tracking_url: string
+  dropoff_eta?: number  // Unix timestamp (seconds)
+  courier?: {
+    name?: string
+    location?: {
+      lat: number
+      lng: number
+    }
+  }
+}
+
+// Maps Uber Direct status strings to our internal DeliveryStatus values
+function mapUberStatus(s: string): string {
+  const map: Record<string, string> = {
+    created:         'created',
+    pickup:          'driver_assigned',   // driver heading to restaurant
+    pickup_complete: 'picked_up',         // driver left restaurant
+    dropoff:         'picked_up',         // en route to customer
+    delivered:       'delivered',
+    cancelled:       'cancelled',
+    returned:        'failed',
+  }
+  return map[s] ?? s
 }
 
 export async function getUberDeliveryStatus(
   deliveryId: string,
-): Promise<{ status: string; trackingUrl: string }> {
+): Promise<LiveDeliveryStatus> {
   const raw = await uberFetch<UberDeliveryStatusResponse>(
     'GET',
     `/deliveries/${encodeURIComponent(deliveryId)}`,
   )
-  return { status: raw.status, trackingUrl: raw.tracking_url }
+  return {
+    status: mapUberStatus(raw.status),
+    trackingUrl: raw.tracking_url,
+    courierLat: raw.courier?.location?.lat,
+    courierLng: raw.courier?.location?.lng,
+    courierName: raw.courier?.name,
+    dropoffEtaAt: raw.dropoff_eta ? new Date(raw.dropoff_eta * 1000).toISOString() : undefined,
+  }
 }

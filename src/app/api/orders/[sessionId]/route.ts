@@ -1,11 +1,10 @@
 /**
  * GET /api/orders/[sessionId]
  *
- * Returns order details for the success page, including delivery tracking info.
- * Only returns the subset of fields safe to expose to the customer.
+ * Returns order details for the success page, including delivery tracking info
+ * and live courier position (updated by webhooks).
  *
- * Returns 404 if the order hasn't been processed yet (webhook pending) so the
- * client can poll with exponential back-off.
+ * Returns 404 while the webhook hasn't fired yet — client should poll with back-off.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -29,9 +28,15 @@ export async function GET(
     orderType: order.orderType,
     amountTotal: order.amountTotal,
     customerName: order.customerName,
-    // Delivery-specific fields
+    // Delivery fields
     deliveryAddress: order.deliveryAddress ?? null,
     deliveryTrackingUrl: order.deliveryTrackingUrl ?? null,
     deliveryStatus: order.deliveryStatus ?? null,
+    externalDeliveryId: order.externalDeliveryId ?? null,
+    // Live courier position (populated by webhooks)
+    courierLat: order.courierLat ?? null,
+    courierLng: order.courierLng ?? null,
+    courierName: order.courierName ?? null,
+    dropoffEtaAt: order.dropoffEtaAt ?? null,
   })
 }
