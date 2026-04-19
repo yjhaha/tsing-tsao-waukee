@@ -11,6 +11,7 @@ out/
 .env.*.local
 
 # misc
+Desktop/
 .DS_Store
 *.pem
 npm-debug.log*
