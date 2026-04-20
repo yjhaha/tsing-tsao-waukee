@@ -186,7 +186,9 @@ export async function createUberDelivery(
     externalDeliveryId: raw.id,
     trackingUrl: raw.tracking_url,
     status: (raw.status as DeliveryDispatch['status']) ?? 'created',
-    dropoffEtaAt: raw.dropoff_eta ? new Date(raw.dropoff_eta * 1000).toISOString() : undefined,
+    dropoffEtaAt: raw.dropoff_eta && Number.isFinite(raw.dropoff_eta)
+      ? new Date(raw.dropoff_eta * 1000).toISOString()
+      : undefined,
   }
 }
 
@@ -233,6 +235,8 @@ export async function getUberDeliveryStatus(
     courierLat: raw.courier?.location?.lat,
     courierLng: raw.courier?.location?.lng,
     courierName: raw.courier?.name,
-    dropoffEtaAt: raw.dropoff_eta ? new Date(raw.dropoff_eta * 1000).toISOString() : undefined,
+    dropoffEtaAt: raw.dropoff_eta && Number.isFinite(raw.dropoff_eta)
+      ? new Date(raw.dropoff_eta * 1000).toISOString()
+      : undefined,
   }
 }
