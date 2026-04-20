@@ -333,7 +333,6 @@ function SuccessContent() {
           {/* ── Left column: confirmation info ── */}
           <div className="text-center lg:text-left flex flex-col gap-5">
             <div>
-              <div className="text-5xl mb-4">🛵</div>
               <h1 className="font-display italic text-4xl text-white mb-2">Order Placed!</h1>
               <p className="text-slate-300 text-base mb-2 leading-relaxed">
                 Your order is confirmed. We&apos;re preparing your food and dispatching a driver.
@@ -385,7 +384,6 @@ function SuccessContent() {
   // ── Pickup / loading fallback: single column ──
   return (
     <div className="max-w-lg mx-auto px-4 pt-32 pb-12 text-center">
-      <div className="text-6xl mb-6">🎉</div>
       <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
       <p className="text-slate-400 text-base mb-2">
         Thank you for ordering from Tsing Tsao. We&apos;re preparing your food now.
@@ -436,8 +434,7 @@ export default function SuccessPage() {
       <Suspense
         fallback={
           <div className="max-w-lg mx-auto px-4 pt-32 pb-12 text-center">
-            <div className="text-6xl mb-6">🎉</div>
-            <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
+              <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
             <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
           </div>
         }
