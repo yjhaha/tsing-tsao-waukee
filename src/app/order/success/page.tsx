@@ -47,7 +47,6 @@ function buildMapUrl({
   if (!key) return null
 
   const base = 'https://maps.googleapis.com/maps/api/staticmap'
-  // Dark-ish map style parameters
   const style = [
     'feature:all|element:geometry|color:0x1e293b',
     'feature:all|element:labels.text.fill|color:0x94a3b8',
@@ -192,15 +191,13 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   }, [order.sessionId, order.externalDeliveryId])
 
   useEffect(() => {
-    // Start polling if delivery is still active
     const isTerminal = ['delivered', 'cancelled', 'failed'].includes(order.deliveryStatus ?? '')
     if (!isTerminal && order.externalDeliveryId) {
-      pollRef.current = setTimeout(poll, 5_000) // first poll after 5s
+      pollRef.current = setTimeout(poll, 5_000)
     }
     return () => { if (pollRef.current) clearTimeout(pollRef.current) }
   }, [poll, order.deliveryStatus, order.externalDeliveryId])
 
-  // Map config from env
   const restaurantLat = parseFloat(process.env.NEXT_PUBLIC_RESTAURANT_LAT ?? '41.6132')
   const restaurantLng = parseFloat(process.env.NEXT_PUBLIC_RESTAURANT_LNG ?? '-93.8692')
   const customerAddr  = order.deliveryAddress ? formatAddress(order.deliveryAddress) : ''
@@ -218,16 +215,16 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   const dropoffEtaAt   = tracking.dropoffEtaAt ?? order.dropoffEtaAt
 
   return (
-    <div className="mt-6 bg-slate-800/90 border border-slate-700/60 rounded-2xl overflow-hidden text-left">
+    <div className="bg-slate-800/90 border border-slate-700/60 rounded-2xl overflow-hidden text-left h-full flex flex-col">
 
       {/* Header */}
-      <div className="px-6 pt-5 pb-3 flex items-center justify-between gap-2 border-b border-slate-700/50">
-        <h2 className="text-white font-bold text-lg flex items-center gap-2.5">
-          <FaMotorcycle className="text-brand-gold text-xl" />
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-2 border-b border-slate-700/50">
+        <h2 className="text-white font-bold text-base flex items-center gap-2">
+          <FaMotorcycle className="text-brand-gold text-lg" />
           <span>Delivery Tracking</span>
         </h2>
         {courierName && (
-          <span className="text-xs text-slate-300 bg-slate-700 px-3 py-1.5 rounded-full border border-slate-600/50">
+          <span className="text-xs text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full border border-slate-600/50">
             Driver: <span className="text-white font-semibold">{courierName}</span>
           </span>
         )}
@@ -235,14 +232,14 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
 
       {/* Map */}
       {mapUrl ? (
-        <div className="mx-6 mt-5 mb-4 rounded-xl overflow-hidden border border-slate-600/50">
+        <div className="mx-5 mt-4 mb-3 rounded-xl overflow-hidden border border-slate-600/50">
           <img
             src={mapUrl}
             alt="Delivery route map"
             className="w-full block"
             key={`${tracking.courierLat ?? 0}-${tracking.courierLng ?? 0}`}
           />
-          <div className="px-4 py-2.5 bg-slate-900/80 flex items-center gap-5 text-xs text-slate-400">
+          <div className="px-4 py-2 bg-slate-900/80 flex items-center gap-4 text-xs text-slate-400">
             <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-gold" />Restaurant</span>
             {tracking.courierLat && <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-400" />Driver</span>}
             <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-green-400" />You</span>
@@ -250,7 +247,7 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
         </div>
       ) : (
         order.deliveryAddress && (
-          <div className="mx-6 mt-5 mb-4 px-4 py-3.5 bg-slate-700/40 border border-slate-600/40 rounded-xl flex items-start gap-3 text-sm">
+          <div className="mx-5 mt-4 mb-3 px-4 py-3 bg-slate-700/40 border border-slate-600/40 rounded-xl flex items-start gap-3 text-sm">
             <FaMapMarkerAlt className="text-brand-gold shrink-0 mt-0.5 text-base" />
             <div>
               <p className="text-slate-400 text-xs uppercase tracking-wider mb-1 font-medium">Delivering to</p>
@@ -261,19 +258,19 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
       )}
 
       {/* Status stepper */}
-      <div className="px-6 pb-3 space-y-3">
+      <div className="px-5 pb-3 space-y-3">
         <StatusStepper status={currentStatus} />
         <EtaDisplay dropoffEtaAt={dropoffEtaAt} />
       </div>
 
       {/* Track live button */}
-      <div className="px-6 pb-6 pt-2">
+      <div className="px-5 pb-5 pt-1 mt-auto">
         {trackingUrl ? (
           <a
             href={trackingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3.5 text-center bg-brand-gold hover:bg-yellow-300 text-slate-900 font-bold rounded-xl transition-colors text-sm shadow-lg shadow-yellow-900/20"
+            className="flex items-center justify-center gap-2 w-full py-3 text-center bg-brand-gold hover:bg-yellow-300 text-slate-900 font-bold rounded-xl transition-colors text-sm shadow-lg shadow-yellow-900/20"
           >
             <FaMapMarkerAlt /> Track Live on Uber →
           </a>
@@ -306,7 +303,6 @@ function SuccessContent() {
         if (res.ok) {
           const data = await res.json()
           setOrder(data)
-          // Keep polling until we get a tracking URL for delivery orders (max ~1 min)
           if (data.orderType === 'delivery' && !data.deliveryTrackingUrl && attempts < 12) {
             setAttempts(n => n + 1)
             timeoutId = setTimeout(poll, 5_000)
@@ -328,20 +324,75 @@ function SuccessContent() {
 
   const isDelivery = order?.orderType === 'delivery'
 
+  // Two-column layout for delivery orders; single column for pickup
+  if (isDelivery && order) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 pt-28 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-6 items-start">
+
+          {/* ── Left column: confirmation info ── */}
+          <div className="text-center lg:text-left flex flex-col gap-5">
+            <div>
+              <div className="text-5xl mb-4">🛵</div>
+              <h1 className="font-display italic text-4xl text-white mb-2">Order Placed!</h1>
+              <p className="text-slate-300 text-base mb-2 leading-relaxed">
+                Your order is confirmed. We&apos;re preparing your food and dispatching a driver.
+              </p>
+              <p className="text-slate-500 text-sm">
+                A confirmation will be sent to your email shortly.
+              </p>
+            </div>
+
+            {/* Order summary card */}
+            <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl px-5 py-4 text-left space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-400">Order total</span>
+                <span className="text-white font-semibold">
+                  ${(order.amountTotal / 100).toFixed(2)}
+                </span>
+              </div>
+              {order.customerName && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Name</span>
+                  <span className="text-white">{order.customerName}</span>
+                </div>
+              )}
+              {order.deliveryAddress && (
+                <div className="flex items-start justify-between text-sm gap-4">
+                  <span className="text-slate-400 shrink-0">Delivering to</span>
+                  <span className="text-white text-right">{formatAddress(order.deliveryAddress)}</span>
+                </div>
+              )}
+            </div>
+
+            <Link
+              href="/menu"
+              className="inline-block w-full lg:w-auto px-8 py-3.5 bg-brand-gold text-slate-900 rounded-xl font-bold hover:bg-yellow-400 transition-colors text-center"
+            >
+              Back to Menu
+            </Link>
+          </div>
+
+          {/* ── Right column: tracking panel ── */}
+          <div>
+            <DeliveryTrackingPanel order={order} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Pickup / loading fallback: single column ──
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-32 pb-12 text-center">
-      <div className="text-6xl mb-6">{isDelivery ? '🛵' : '🎉'}</div>
+    <div className="max-w-lg mx-auto px-4 pt-32 pb-12 text-center">
+      <div className="text-6xl mb-6">🎉</div>
       <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
       <p className="text-slate-400 text-base mb-2">
-        {isDelivery
-          ? "Your order is confirmed. We're preparing your food and dispatching a driver."
-          : "Thank you for ordering from Tsing Tsao. We're preparing your food now."}
+        Thank you for ordering from Tsing Tsao. We&apos;re preparing your food now.
       </p>
       <p className="text-slate-500 text-sm mb-6">
         A confirmation will be sent to your email shortly.
       </p>
-
-      {isDelivery && order && <DeliveryTrackingPanel order={order} />}
 
       {!order && sessionId && (
         <div className="mt-4 text-slate-600 text-sm animate-pulse">
@@ -349,14 +400,29 @@ function SuccessContent() {
         </div>
       )}
 
-      <div className="mt-8">
-        <Link
-          href="/menu"
-          className="inline-block px-8 py-3.5 bg-brand-gold text-slate-900 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
-        >
-          Back to Menu
-        </Link>
-      </div>
+      {order && (
+        <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl px-5 py-4 text-left space-y-3 mb-6">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-slate-400">Order total</span>
+            <span className="text-white font-semibold">
+              ${(order.amountTotal / 100).toFixed(2)}
+            </span>
+          </div>
+          {order.customerName && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-400">Name</span>
+              <span className="text-white">{order.customerName}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Link
+        href="/menu"
+        className="inline-block px-8 py-3.5 bg-brand-gold text-slate-900 rounded-xl font-bold hover:bg-yellow-400 transition-colors"
+      >
+        Back to Menu
+      </Link>
     </div>
   )
 }
@@ -369,7 +435,7 @@ export default function SuccessPage() {
       <NavBar />
       <Suspense
         fallback={
-          <div className="max-w-2xl mx-auto px-4 pt-32 pb-12 text-center">
+          <div className="max-w-lg mx-auto px-4 pt-32 pb-12 text-center">
             <div className="text-6xl mb-6">🎉</div>
             <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
             <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
