@@ -22,5 +22,3 @@ tsconfig.tsbuildinfo
 
 # Vercel
 .vercel
-Desktop/
-.claude/worktrees/

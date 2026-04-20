@@ -95,10 +95,10 @@ function EtaDisplay({ dropoffEtaAt }: { dropoffEtaAt: string | null }) {
   if (!display) return null
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-700/50 rounded-xl text-sm">
-      <FaClock className="text-brand-gold shrink-0" />
-      <span className="text-slate-300">Estimated arrival: </span>
-      <span className="text-brand-gold font-semibold tabular-nums">{display}</span>
+    <div className="flex items-center gap-2.5 px-4 py-3 bg-brand-gold/10 border border-brand-gold/25 rounded-xl text-sm">
+      <FaClock className="text-brand-gold shrink-0 text-base" />
+      <span className="text-slate-300">Estimated arrival:</span>
+      <span className="text-brand-gold font-bold tabular-nums">{display}</span>
     </div>
   )
 }
@@ -120,33 +120,31 @@ function StatusStepper({ status }: { status: string | null }) {
 
   if (isCancelled) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 bg-red-900/30 border border-red-700/40 rounded-xl text-red-300 text-sm">
-        <FaExclamationTriangle className="shrink-0 text-red-400" />
+      <div className="flex items-center gap-2 px-4 py-3 bg-red-900/40 border border-red-600/50 rounded-xl text-red-200 text-sm">
+        <FaExclamationTriangle className="shrink-0 text-red-400 text-base" />
         <span>Delivery was cancelled — please call us at (515) 830-9600</span>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="grid grid-cols-4 gap-2">
       {STATUS_STEPS.map((step, idx) => {
         const done    = idx <= currentIdx
         const current = idx === currentIdx
         return (
-          <div key={step.key} className="flex items-center gap-1 min-w-0">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              done
-                ? current
-                  ? 'bg-brand-gold text-slate-900'
-                  : 'bg-green-700/50 text-green-300'
-                : 'bg-slate-700/50 text-slate-500'
-            }`}>
-              <span className="text-[11px]">{step.icon}</span>
-              <span className="hidden sm:inline">{step.label}</span>
-            </div>
-            {idx < STATUS_STEPS.length - 1 && (
-              <div className={`h-0.5 w-3 shrink-0 rounded ${idx < currentIdx ? 'bg-green-600' : 'bg-slate-700'}`} />
-            )}
+          <div
+            key={step.key}
+            className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-center text-xs font-semibold transition-all ${
+              current
+                ? 'bg-brand-gold text-slate-900 shadow-lg shadow-yellow-900/30'
+                : done
+                ? 'bg-green-800/60 text-green-200 border border-green-700/40'
+                : 'bg-slate-700/40 text-slate-500 border border-slate-700/30'
+            }`}
+          >
+            <span className="text-sm">{step.icon}</span>
+            <span className="leading-tight">{step.label}</span>
           </div>
         )
       })}
@@ -220,70 +218,68 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   const dropoffEtaAt   = tracking.dropoffEtaAt ?? order.dropoffEtaAt
 
   return (
-    <div className="mt-6 bg-slate-800 rounded-2xl overflow-hidden text-left">
+    <div className="mt-6 bg-slate-800/90 border border-slate-700/60 rounded-2xl overflow-hidden text-left">
 
       {/* Header */}
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between gap-2">
-        <h2 className="text-white font-semibold text-base flex items-center gap-2">
-          <FaMotorcycle className="text-brand-gold" />
+      <div className="px-6 pt-5 pb-3 flex items-center justify-between gap-2 border-b border-slate-700/50">
+        <h2 className="text-white font-bold text-lg flex items-center gap-2.5">
+          <FaMotorcycle className="text-brand-gold text-xl" />
           <span>Delivery Tracking</span>
         </h2>
         {courierName && (
-          <span className="text-xs text-slate-400 bg-slate-700 px-2.5 py-1 rounded-full">
-            Driver: <span className="text-slate-200 font-medium">{courierName}</span>
+          <span className="text-xs text-slate-300 bg-slate-700 px-3 py-1.5 rounded-full border border-slate-600/50">
+            Driver: <span className="text-white font-semibold">{courierName}</span>
           </span>
         )}
       </div>
 
       {/* Map */}
       {mapUrl ? (
-        <div className="mx-5 mb-4 rounded-xl overflow-hidden border border-slate-700/50">
-          {/* key changes when courier moves, forcing the img to re-fetch */}
+        <div className="mx-6 mt-5 mb-4 rounded-xl overflow-hidden border border-slate-600/50">
           <img
             src={mapUrl}
             alt="Delivery route map"
             className="w-full block"
             key={`${tracking.courierLat ?? 0}-${tracking.courierLng ?? 0}`}
           />
-          <div className="px-3 py-2 bg-slate-900/60 flex items-center gap-4 text-[11px] text-slate-500">
-            <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-brand-gold" />Restaurant</span>
-            {tracking.courierLat && <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-blue-400" />Driver</span>}
-            <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-green-500" />You</span>
+          <div className="px-4 py-2.5 bg-slate-900/80 flex items-center gap-5 text-xs text-slate-400">
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-brand-gold" />Restaurant</span>
+            {tracking.courierLat && <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-400" />Driver</span>}
+            <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-full bg-green-400" />You</span>
           </div>
         </div>
       ) : (
-        /* No Maps key — show address text instead */
         order.deliveryAddress && (
-          <div className="mx-5 mb-4 px-4 py-3 bg-slate-700/30 rounded-xl flex items-start gap-2.5 text-sm">
-            <FaMapMarkerAlt className="text-brand-gold shrink-0 mt-0.5" />
+          <div className="mx-6 mt-5 mb-4 px-4 py-3.5 bg-slate-700/40 border border-slate-600/40 rounded-xl flex items-start gap-3 text-sm">
+            <FaMapMarkerAlt className="text-brand-gold shrink-0 mt-0.5 text-base" />
             <div>
-              <p className="text-slate-500 text-xs uppercase tracking-wide mb-0.5">Delivering to</p>
-              <p className="text-slate-200">{formatAddress(order.deliveryAddress)}</p>
+              <p className="text-slate-400 text-xs uppercase tracking-wider mb-1 font-medium">Delivering to</p>
+              <p className="text-slate-100 font-medium">{formatAddress(order.deliveryAddress)}</p>
             </div>
           </div>
         )
       )}
 
-      {/* Status stepper + ETA */}
-      <div className="px-5 pb-2 space-y-3">
+      {/* Status stepper */}
+      <div className="px-6 pb-3 space-y-3">
         <StatusStepper status={currentStatus} />
         <EtaDisplay dropoffEtaAt={dropoffEtaAt} />
       </div>
 
       {/* Track live button */}
-      <div className="px-5 pb-5 pt-3">
+      <div className="px-6 pb-6 pt-2">
         {trackingUrl ? (
           <a
             href={trackingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 text-center bg-brand-gold hover:bg-yellow-400 text-slate-900 font-bold rounded-xl transition-colors text-sm"
+            className="flex items-center justify-center gap-2 w-full py-3.5 text-center bg-brand-gold hover:bg-yellow-300 text-slate-900 font-bold rounded-xl transition-colors text-sm shadow-lg shadow-yellow-900/20"
           >
             <FaMapMarkerAlt /> Track Live on Uber →
           </a>
         ) : (
-          <p className="text-slate-500 text-xs text-center">
-            A live tracking link will be sent to your email once a driver is assigned.
+          <p className="text-slate-400 text-sm text-center py-1">
+            A live tracking link will be emailed once a driver is assigned.
           </p>
         )}
       </div>
@@ -333,7 +329,7 @@ function SuccessContent() {
   const isDelivery = order?.orderType === 'delivery'
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-32 pb-12 text-center">
+    <div className="max-w-2xl mx-auto px-4 pt-32 pb-12 text-center">
       <div className="text-6xl mb-6">{isDelivery ? '🛵' : '🎉'}</div>
       <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
       <p className="text-slate-400 text-base mb-2">
@@ -373,7 +369,7 @@ export default function SuccessPage() {
       <NavBar />
       <Suspense
         fallback={
-          <div className="max-w-md mx-auto px-4 pt-32 pb-12 text-center">
+          <div className="max-w-2xl mx-auto px-4 pt-32 pb-12 text-center">
             <div className="text-6xl mb-6">🎉</div>
             <h1 className="font-display italic text-4xl text-white mb-3">Order Placed!</h1>
             <p className="text-slate-500 text-sm animate-pulse">Loading…</p>
