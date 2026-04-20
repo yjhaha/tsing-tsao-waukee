@@ -302,15 +302,16 @@ const NEXT_STATUS_LABEL: Record<string, string> = {
 function SimulateButton({ sessionId, currentStatus, onAdvance }: {
   sessionId: string
   currentStatus: string | null
-  onAdvance: () => void
+  onAdvance: (newStatus: string) => void
 }) {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const status = currentStatus ?? 'created'
   const nextLabel = NEXT_STATUS_LABEL[status]
 
-  if (done || !nextLabel) return (
+  if (done || status === 'delivered') return (
     <div className="px-4 py-2.5 bg-green-900/30 border border-green-700/40 rounded-xl text-xs text-green-300 text-center">
       Simulation complete — delivery marked as delivered
     </div>
@@ -318,6 +319,7 @@ function SimulateButton({ sessionId, currentStatus, onAdvance }: {
 
   async function advance() {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/dev/simulate-delivery', {
         method: 'POST',
@@ -325,8 +327,14 @@ function SimulateButton({ sessionId, currentStatus, onAdvance }: {
         body: JSON.stringify({ sessionId }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `HTTP ${res.status}`)
+        return
+      }
       if (data.done) setDone(true)
-      onAdvance()
+      onAdvance(data.status)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error')
     } finally {
       setLoading(false)
     }
@@ -347,6 +355,9 @@ function SimulateButton({ sessionId, currentStatus, onAdvance }: {
           {loading ? 'Advancing…' : `→ ${nextLabel}`}
         </button>
       </div>
+      {error && (
+        <p className="text-xs text-red-400 font-mono">{error}</p>
+      )}
     </div>
   )
 }
@@ -392,13 +403,10 @@ function SuccessContent() {
   const isDelivery = order?.orderType === 'delivery'
   const isDev = process.env.NODE_ENV === 'development'
 
-  // Refresh order data (used by simulate button to pull latest status)
-  function refreshOrder() {
-    if (!sessionId) return
-    fetch(`/api/orders/${sessionId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setOrder(data) })
-      .catch(() => {})
+  // Called by SimulateButton after a successful advance — updates order state directly
+  function handleSimulatedAdvance(newStatus: string) {
+    if (!order) return
+    setOrder({ ...order, deliveryStatus: newStatus })
   }
 
   // Two-column layout for delivery orders; single column for pickup
@@ -445,7 +453,7 @@ function SuccessContent() {
               <SimulateButton
                 sessionId={order.sessionId}
                 currentStatus={order.deliveryStatus}
-                onAdvance={refreshOrder}
+                onAdvance={handleSimulatedAdvance}
               />
             )}
 
@@ -459,7 +467,7 @@ function SuccessContent() {
 
           {/* ── Right column: tracking panel ── */}
           <div>
-            <DeliveryTrackingPanel order={order} />
+            <DeliveryTrackingPanel key={order.deliveryStatus ?? 'loading'} order={order} />
           </div>
         </div>
       </div>
