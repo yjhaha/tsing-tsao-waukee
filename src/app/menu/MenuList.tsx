@@ -157,6 +157,7 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
   const [selectedSizeIdx, setSelectedSizeIdx] = useState(0)
   const [spiceLevel, setSpiceLevel] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
 
   const price = item.sizes ? item.sizes[selectedSizeIdx].price : (item.price ?? 0)
 
@@ -175,26 +176,22 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
     <>
       <div className="flex flex-col bg-slate-800 rounded-xl hover:bg-slate-700/60 transition-colors">
         <div className="flex items-center gap-3 p-3">
-          {/* Thumbnail — expandable */}
-          <div
-            className={`relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-700 ${item.image ? 'cursor-zoom-in group' : ''}`}
-            onClick={() => item.image && setLightboxOpen(true)}
-            role={item.image ? 'button' : undefined}
-            aria-label={item.image ? `View ${item.name} photo` : undefined}
-            tabIndex={item.image ? 0 : undefined}
-            onKeyDown={e => { if (e.key === 'Enter' && item.image) setLightboxOpen(true) }}
-          >
-            {item.image ? (
-              <>
-                <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" sizes="64px" />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-                  <FaSearchPlus className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow text-base" />
-                </div>
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">🍽</div>
-            )}
-          </div>
+          {/* Thumbnail — only rendered when image exists */}
+          {item.image && (
+            <div
+              className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-700 cursor-zoom-in group"
+              onClick={() => setLightboxOpen(true)}
+              role="button"
+              aria-label={`View ${item.name} photo`}
+              tabIndex={0}
+              onKeyDown={e => { if (e.key === 'Enter') setLightboxOpen(true) }}
+            >
+              <Image src={item.image} alt={item.name} fill className="object-cover transition-transform duration-200 group-hover:scale-105" sizes="64px" />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                <FaSearchPlus className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow text-base" />
+              </div>
+            </div>
+          )}
 
           {/* Name + description */}
           <div className="flex-1 min-w-0">
@@ -203,7 +200,21 @@ function MenuRow({ item, orderMode, showSpiceLevel }: { item: MenuItem; orderMod
               {item.spicy && <FaFire className="text-white text-xs shrink-0" />}
               {item.loMeinChowMein && <NoodleInfo />}
             </div>
-            <p className="text-slate-400 text-xs leading-relaxed mt-0.5 line-clamp-2">{item.description}</p>
+            <p
+              className={`text-slate-400 text-xs leading-relaxed mt-0.5 cursor-pointer ${descExpanded ? '' : 'line-clamp-2'}`}
+              onClick={() => setDescExpanded(v => !v)}
+            >
+              {item.description}
+            </p>
+            {!descExpanded && item.description.length > 80 && (
+              <button
+                type="button"
+                className="text-slate-500 text-[10px] hover:text-slate-300 transition-colors leading-none mt-0.5"
+                onClick={() => setDescExpanded(true)}
+              >
+                more
+              </button>
+            )}
             {item.serves && <p className="text-slate-500 text-[10px] mt-0.5">{item.serves}</p>}
             {/* Spice meter inline under description */}
             {showSpice && <SpiceMeter value={spiceLevel} onChange={setSpiceLevel} />}

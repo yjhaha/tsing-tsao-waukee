@@ -23,7 +23,7 @@ export async function GET(
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params
-  const order = getOrder(sessionId)
+  const order = await getOrder(sessionId)
 
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -51,10 +51,10 @@ export async function GET(
 
     // Write updates back to the store (keeps kitchen page in sync too)
     if (live.status !== order.deliveryStatus) {
-      updateOrderDeliveryStatus(order.externalDeliveryId, live.status, live.trackingUrl)
+      await updateOrderDeliveryStatus(order.externalDeliveryId, live.status, live.trackingUrl)
     }
     if (live.courierLat && live.courierLng) {
-      updateOrderCourierLocation(
+      await updateOrderCourierLocation(
         order.externalDeliveryId,
         live.courierLat,
         live.courierLng,

@@ -180,6 +180,7 @@ export async function createUberDelivery(
         price: params.orderValueCents,
       },
     ],
+    ...(params.tipCents && params.tipCents > 0 ? { tip: params.tipCents } : {}),
   })
 
   return {

@@ -22,11 +22,13 @@ export async function POST(req: NextRequest) {
       orderMode,
       deliveryAddress,
       deliveryQuote,
+      tipCents,
     }: {
       items: CheckoutItem[]
       orderMode?: 'pickup' | 'delivery'
       deliveryAddress?: DeliveryAddress
       deliveryQuote?: DeliveryQuote
+      tipCents?: number
     } = body
 
     if (!items?.length) {
@@ -58,7 +60,6 @@ export async function POST(req: NextRequest) {
       },
     }))
 
-    // Add delivery fee line item (what the customer pays)
     if (isDelivery && deliveryQuote) {
       lineItems.push({
         quantity: 1,
@@ -69,6 +70,17 @@ export async function POST(req: NextRequest) {
             name: 'Delivery Fee',
             description: 'Direct delivery — no third-party commission',
           },
+        },
+      })
+    }
+
+    if (isDelivery && tipCents && tipCents > 0) {
+      lineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: tipCents,
+          product_data: { name: 'Driver Tip' },
         },
       })
     }
@@ -92,6 +104,10 @@ export async function POST(req: NextRequest) {
       metadata['delivery_external_id'] = deliveryQuote.externalDeliveryId
       metadata['delivery_customer_fee_cents'] = String(deliveryQuote.customerFeeCents)
       metadata['delivery_restaurant_fee_cents'] = String(deliveryQuote.restaurantFeeCents)
+    }
+
+    if (isDelivery && tipCents && tipCents > 0) {
+      metadata['tip_cents'] = String(tipCents)
     }
 
     // ── Create Stripe session ────────────────────────────────────────────────

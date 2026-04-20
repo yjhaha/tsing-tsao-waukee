@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const { sessionId } = await params
-  const order = getOrder(sessionId)
+  const order = await getOrder(sessionId)
 
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })

@@ -15,7 +15,7 @@ export async function GET() {
   try {
     // ── 1. Pull from in-memory store (populated by webhook) ─────────────────
     // The store has full delivery metadata (address, tracking URL, status).
-    const storeOrders = getOrders()
+    const storeOrders = await getOrders()
     const storeIds = new Set(storeOrders.map(o => o.sessionId))
 
     // ── 2. Also fetch from Stripe for any paid orders that the webhook
@@ -54,7 +54,7 @@ export async function GET() {
         customerPhone: s.customer_details?.phone ?? undefined,
         orderType,
         items: (s.line_items?.data ?? [])
-          .filter(li => li.description !== 'Delivery Fee') // exclude fee line item
+          .filter(li => li.description !== 'Delivery Fee' && li.description !== 'Driver Tip')
           .map(li => ({
             name: li.description ?? 'Item',
             quantity: li.quantity ?? 1,

@@ -88,7 +88,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   })
 
   const items: OrderEmailItem[] = lineItemsResponse.data
-    .filter(li => li.description !== 'Delivery Fee') // exclude the fee from order items
+    .filter(li => li.description !== 'Delivery Fee' && li.description !== 'Driver Tip')
     .map(li => ({
       name: li.description ?? 'Item',
       quantity: li.quantity ?? 1,
@@ -98,6 +98,8 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   // ── Dispatch delivery ─────────────────────────────────────────────────────
   let deliveryTrackingUrl: string | undefined
   let dropoffEtaAt: string | undefined
+
+  const tipCents = meta.tip_cents ? parseInt(meta.tip_cents, 10) : 0
 
   if (isDelivery && deliveryAddress && externalDeliveryId) {
     try {
@@ -109,6 +111,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
         dropoffPhone: customerPhone ?? '',
         dropoffInstructions: '',
         orderValueCents: session.amount_total ?? 0,
+        tipCents: tipCents > 0 ? tipCents : undefined,
       })
       deliveryTrackingUrl = dispatch.trackingUrl
       dropoffEtaAt = dispatch.dropoffEtaAt
@@ -120,7 +123,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   }
 
   // ── Save to order store ────────────────────────────────────────────────────
-  saveOrder({
+  await saveOrder({
     sessionId: session.id,
     createdAt: session.created,
     customerEmail,

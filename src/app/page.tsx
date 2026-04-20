@@ -103,7 +103,7 @@ export default function HomePage() {
               <h2 className="font-display text-xl text-white">Our Hours</h2>
               <OpenStatus />
             </div>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <dl className="space-y-1.5 text-sm">
                 {[
                   ['Monday – Thursday:', '11:00 AM – 9:00 PM'],

@@ -1,4 +1,5 @@
-import { DeliveryAddress, DeliveryStatus } from './delivery/types'
+import { Redis } from '@upstash/redis'
+import type { DeliveryAddress, DeliveryStatus } from './delivery/types'
 
 export interface KitchenOrder {
   sessionId: string
@@ -6,89 +7,86 @@ export interface KitchenOrder {
   customerEmail: string | undefined
   customerName: string | undefined
   customerPhone: string | undefined
-  orderType: string  // 'pickup' | 'delivery'
+  orderType: string
   items: { name: string; quantity: number; amount_total: number }[]
   amountTotal: number
-  // ── Delivery fields (only set when orderType === 'delivery') ──────────────
   deliveryAddress?: DeliveryAddress
-  /** Provider delivery ID — used to correlate webhook updates. */
   externalDeliveryId?: string
   deliveryTrackingUrl?: string
   deliveryStatus?: DeliveryStatus
-  /** ISO-8601 estimated dropoff time from the provider. */
   dropoffEtaAt?: string
-  /** Live courier latitude (updated via webhook or polling). */
   courierLat?: number
-  /** Live courier longitude (updated via webhook or polling). */
   courierLng?: number
   courierName?: string
 }
 
-const store = new Map<string, KitchenOrder>()
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
-/** Index: externalDeliveryId → sessionId (for webhook lookups). */
-const deliveryIndex = new Map<string, string>()
+const TTL = 60 * 60 * 24 * 30 // 30 days
+const ORDERS_SET = 'orders:by_time'
 
-export function saveOrder(order: KitchenOrder) {
-  store.set(order.sessionId, order)
-  if (order.externalDeliveryId) {
-    deliveryIndex.set(order.externalDeliveryId, order.sessionId)
-  }
+const orderKey    = (sessionId: string)  => `order:${sessionId}`
+const deliveryKey = (externalId: string) => `delivery:${externalId}`
+
+export async function saveOrder(order: KitchenOrder): Promise<void> {
+  await Promise.all([
+    redis.set(orderKey(order.sessionId), order, { ex: TTL }),
+    order.externalDeliveryId
+      ? redis.set(deliveryKey(order.externalDeliveryId), order.sessionId, { ex: TTL })
+      : Promise.resolve(),
+    redis.zadd(ORDERS_SET, { score: order.createdAt, member: order.sessionId }),
+  ])
 }
 
-export function getOrders(): KitchenOrder[] {
-  return Array.from(store.values()).sort((a, b) => b.createdAt - a.createdAt)
+export async function getOrders(): Promise<KitchenOrder[]> {
+  const ids = await redis.zrange(ORDERS_SET, 0, 49, { rev: true }) as string[]
+  if (!ids.length) return []
+  const orders = await Promise.all(ids.map(id => redis.get<KitchenOrder>(orderKey(id))))
+  return orders.filter(Boolean) as KitchenOrder[]
 }
 
-export function getOrder(sessionId: string): KitchenOrder | undefined {
-  return store.get(sessionId)
+export async function getOrder(sessionId: string): Promise<KitchenOrder | undefined> {
+  const order = await redis.get<KitchenOrder>(orderKey(sessionId))
+  return order ?? undefined
 }
 
-/** Look up an order by its provider externalDeliveryId (for webhook handlers). */
-export function getOrderByDeliveryId(externalDeliveryId: string): KitchenOrder | undefined {
-  const sessionId = deliveryIndex.get(externalDeliveryId)
+export async function getOrderByDeliveryId(externalDeliveryId: string): Promise<KitchenOrder | undefined> {
+  const sessionId = await redis.get<string>(deliveryKey(externalDeliveryId))
   if (!sessionId) return undefined
-  return store.get(sessionId)
+  return getOrder(sessionId)
 }
 
-/** Update delivery status after a webhook fires. */
-export function updateOrderDeliveryStatus(
+export async function updateOrderDeliveryStatus(
   externalDeliveryId: string,
   status: string,
   trackingUrl?: string,
-) {
-  const sessionId = deliveryIndex.get(externalDeliveryId)
-  if (!sessionId) return
-  const order = store.get(sessionId)
+): Promise<void> {
+  const order = await getOrderByDeliveryId(externalDeliveryId)
   if (!order) return
-  store.set(sessionId, {
+  await redis.set(orderKey(order.sessionId), {
     ...order,
     deliveryStatus: status as DeliveryStatus,
     ...(trackingUrl ? { deliveryTrackingUrl: trackingUrl } : {}),
-  })
+  }, { ex: TTL })
 }
 
-/** Update live courier location + ETA (from webhook or polling). */
-export function updateOrderCourierLocation(
+export async function updateOrderCourierLocation(
   externalDeliveryId: string,
   courierLat: number,
   courierLng: number,
   courierName?: string,
   dropoffEtaAt?: string,
-) {
-  const sessionId = deliveryIndex.get(externalDeliveryId)
-  if (!sessionId) return
-  const order = store.get(sessionId)
+): Promise<void> {
+  const order = await getOrderByDeliveryId(externalDeliveryId)
   if (!order) return
-  store.set(sessionId, {
+  await redis.set(orderKey(order.sessionId), {
     ...order,
     courierLat,
     courierLng,
     ...(courierName ? { courierName } : {}),
     ...(dropoffEtaAt ? { dropoffEtaAt } : {}),
-  })
-}
-
-export function isEmpty(): boolean {
-  return store.size === 0
+  }, { ex: TTL })
 }

@@ -31,7 +31,10 @@ interface CartContextType {
   setDeliveryAddress: (address: DeliveryAddress | null) => void
   deliveryQuote: DeliveryQuote | null
   setDeliveryQuote: (quote: DeliveryQuote | null) => void
-  /** Total the customer pays = food subtotal + customer delivery fee. */
+  /** Driver tip in cents (delivery only). */
+  tipCents: number
+  setTipCents: (cents: number) => void
+  /** Total the customer pays = food subtotal + customer delivery fee + tip. */
   grandTotal: number
 }
 
@@ -42,6 +45,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [orderMode, setOrderMode] = useState<OrderMode>('pickup')
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress | null>(null)
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null)
+  const [tipCents, setTipCents] = useState<number>(0)
 
   function addItem(incoming: Omit<CartItem, 'quantity'>) {
     setItems(prev => {
@@ -76,17 +80,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const count = items.reduce((sum, i) => sum + i.quantity, 0)
 
-  // Grand total includes delivery fee charged to the customer
   const deliveryFeeDollars =
     orderMode === 'delivery' && deliveryQuote
       ? deliveryQuote.customerFeeCents / 100
       : 0
-  const grandTotal = total + deliveryFeeDollars
+  const grandTotal = total + deliveryFeeDollars + (orderMode === 'delivery' ? tipCents / 100 : 0)
 
-  // Reset delivery quote if address changes
   function handleSetDeliveryAddress(address: DeliveryAddress | null) {
     setDeliveryAddress(address)
-    setDeliveryQuote(null) // stale quote — force re-check
+    setDeliveryQuote(null)
   }
 
   return (
@@ -96,6 +98,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         orderMode, setOrderMode,
         deliveryAddress, setDeliveryAddress: handleSetDeliveryAddress,
         deliveryQuote, setDeliveryQuote,
+        tipCents, setTipCents,
         grandTotal,
       }}
     >

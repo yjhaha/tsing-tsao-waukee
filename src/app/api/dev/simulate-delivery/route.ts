@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'sessionId required' }, { status: 400 })
   }
 
-  const order = getOrder(sessionId)
+  const order = await getOrder(sessionId)
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     updates.dropoffEtaAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min from now
   }
 
-  saveOrder({ ...order, ...updates })
+  await saveOrder({ ...order, ...updates })
 
   return NextResponse.json({
     status: nextStatus,

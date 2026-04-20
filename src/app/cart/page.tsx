@@ -179,6 +179,7 @@ export default function CartPage() {
     orderMode,
     deliveryAddress, setDeliveryAddress,
     deliveryQuote, setDeliveryQuote,
+    tipCents, setTipCents,
     grandTotal,
   } = useCart()
 
@@ -186,6 +187,9 @@ export default function CartPage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
+  const [customTip, setCustomTip] = useState('')
+
+  const TIP_PRESETS = [0, 200, 300, 500] // cents
 
   const isDelivery = orderMode === 'delivery'
   const deliveryReady = isDelivery && !!deliveryQuote
@@ -243,6 +247,7 @@ export default function CartPage() {
             ? {
                 deliveryAddress,
                 deliveryQuote,
+                tipCents: tipCents > 0 ? tipCents : undefined,
               }
             : {}),
         }),
@@ -352,6 +357,45 @@ export default function CartPage() {
               />
             )}
 
+            {/* Driver tip — shown once delivery is quoted */}
+            {isDelivery && deliveryQuote && (
+              <div className="bg-slate-800 rounded-xl p-4 mb-4">
+                <h2 className="text-white font-semibold text-sm mb-3">Driver Tip</h2>
+                <div className="flex gap-2 mb-2">
+                  {TIP_PRESETS.map(cents => (
+                    <button
+                      key={cents}
+                      type="button"
+                      onClick={() => { setTipCents(cents); setCustomTip('') }}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                        tipCents === cents && customTip === ''
+                          ? 'bg-brand-gold text-slate-900'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {cents === 0 ? 'None' : `$${(cents / 100).toFixed(0)}`}
+                    </button>
+                  ))}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Other"
+                    value={customTip}
+                    onChange={e => {
+                      setCustomTip(e.target.value)
+                      const cents = Math.round(parseFloat(e.target.value || '0') * 100)
+                      setTipCents(isNaN(cents) ? 0 : cents)
+                    }}
+                    className={`w-20 bg-slate-700 border rounded-lg px-2 py-2 text-white text-sm text-center placeholder:text-slate-500 focus:outline-none focus:border-brand-gold ${
+                      customTip !== '' ? 'border-brand-gold' : 'border-slate-600'
+                    }`}
+                  />
+                </div>
+                <p className="text-slate-500 text-xs">100% goes to your driver.</p>
+              </div>
+            )}
+
             {/* Order summary */}
             <div className="bg-slate-800 rounded-xl p-4 mb-5">
               <div className="flex justify-between text-sm text-slate-400 mb-1">
@@ -369,6 +413,12 @@ export default function CartPage() {
                         : '—'}
                     </span>
                   </div>
+                  {deliveryQuote && tipCents > 0 && (
+                    <div className="flex justify-between text-sm text-slate-400 mb-1">
+                      <span>Driver tip</span>
+                      <span className="tabular-nums">{fmt(tipCents / 100)}</span>
+                    </div>
+                  )}
                   {deliveryQuote && (() => {
                     // DoorDash typically charges ~$5.99 delivery + 15% service fee
                     const ddFees = 5.99 + total * 0.15

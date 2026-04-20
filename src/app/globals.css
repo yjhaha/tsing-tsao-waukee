@@ -10,8 +10,8 @@ html {
 @layer components {
   .hero-btn {
     @apply flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium text-white
-           bg-black/50 backdrop-blur-sm border border-white/25 rounded-lg
-           hover:bg-black/70 active:scale-[0.98] transition-all duration-150;
+           bg-slate-800/70 backdrop-blur-md border border-slate-700/50 rounded-lg
+           hover:bg-slate-800/90 active:scale-[0.98] transition-all duration-150;
   }
 
   .info-card {

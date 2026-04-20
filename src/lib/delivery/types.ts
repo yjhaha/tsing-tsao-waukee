@@ -62,4 +62,5 @@ export interface DispatchParams {
   dropoffPhone: string
   dropoffInstructions?: string
   orderValueCents: number
+  tipCents?: number
 }

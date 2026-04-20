@@ -99,14 +99,13 @@ async function handleWebhook(payload: DdWebhookPayload) {
 
   console.log(`[doordash webhook] ${external_delivery_id} → ${delivery_status}`)
 
-  // Update in-memory order store
-  updateOrderDeliveryStatus(external_delivery_id, delivery_status, tracking_url)
+  await updateOrderDeliveryStatus(external_delivery_id, delivery_status, tracking_url)
 
   // Send customer notification for key status changes
   const notification = STATUS_CUSTOMER_MESSAGES[payload.event_type]
   if (!notification) return
 
-  const order = getOrderByDeliveryId(external_delivery_id)
+  const order = await getOrderByDeliveryId(external_delivery_id)
   if (!order?.customerEmail) return
 
   const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'

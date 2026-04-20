@@ -116,14 +116,14 @@ async function handleWebhook(payload: UberWebhookPayload) {
     const dropoffEtaAt = data.dropoff_eta
       ? new Date(data.dropoff_eta * 1000).toISOString()
       : undefined
-    updateOrderCourierLocation(deliveryId, lat, lng, data.courier.name, dropoffEtaAt)
+    await updateOrderCourierLocation(deliveryId, lat, lng, data.courier.name, dropoffEtaAt)
     return
   }
 
   // ── Delivery status change ─────────────────────────────────────────────────
   if (event_type === 'delivery.status.changed' && data.status) {
     const internalStatus = STATUS_MAP[data.status] ?? data.status
-    updateOrderDeliveryStatus(deliveryId, internalStatus, data.tracking_url)
+    await updateOrderDeliveryStatus(deliveryId, internalStatus, data.tracking_url)
 
     // Also store courier location + ETA if included in the payload
     if (data.courier?.location) {
@@ -131,14 +131,14 @@ async function handleWebhook(payload: UberWebhookPayload) {
       const dropoffEtaAt = data.dropoff_eta
         ? new Date(data.dropoff_eta * 1000).toISOString()
         : undefined
-      updateOrderCourierLocation(deliveryId, lat, lng, data.courier.name, dropoffEtaAt)
+      await updateOrderCourierLocation(deliveryId, lat, lng, data.courier.name, dropoffEtaAt)
     }
 
     // Send customer notification email for key status changes
     const notification = STATUS_EMAILS[internalStatus]
     if (!notification) return
 
-    const order = getOrderByDeliveryId(deliveryId)
+    const order = await getOrderByDeliveryId(deliveryId)
     if (!order?.customerEmail) return
 
     const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
