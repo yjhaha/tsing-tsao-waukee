@@ -354,7 +354,7 @@ function KitchenDisplay() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch('/api/orders')
+      const res = await fetch(`/api/orders?pin=${encodeURIComponent(PIN)}`)
       if (!res.ok) return
       const { orders: fetched }: { orders: Order[] } = await res.json()
 
@@ -416,7 +416,11 @@ function KitchenDisplay() {
       return next
     })
     try {
-      await fetch(`/api/orders/${id}/ready`, { method: 'POST' })
+      await fetch(`/api/orders/${id}/ready`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: PIN }),
+      })
     } catch {
       // non-critical
     }

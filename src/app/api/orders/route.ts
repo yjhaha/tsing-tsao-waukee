@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { getOrders } from '@/lib/orderStore'
 
@@ -9,7 +9,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
 })
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const pin = req.nextUrl.searchParams.get('pin')
+  if (!pin || pin !== process.env.NEXT_PUBLIC_KITCHEN_PIN) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const since = Math.floor(Date.now() / 1000) - 86400 // last 24 h
 
   try {

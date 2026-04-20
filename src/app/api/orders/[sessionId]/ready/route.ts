@@ -5,9 +5,14 @@ import { getOrder } from '@/lib/orderStore'
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const body = await req.json().catch(() => ({}))
+  if (!body.pin || body.pin !== process.env.NEXT_PUBLIC_KITCHEN_PIN) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { sessionId } = await params
   const order = await getOrder(sessionId)
 
