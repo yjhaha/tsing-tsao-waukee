@@ -284,6 +284,73 @@ function DeliveryTrackingPanel({ order }: { order: OrderDetails }) {
   )
 }
 
+// ── Dev-only simulate button ──────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<string, string> = {
+  created:         'Confirmed',
+  driver_assigned: 'Driver Assigned',
+  picked_up:       'Picked Up',
+  delivered:       'Delivered',
+}
+
+const NEXT_STATUS_LABEL: Record<string, string> = {
+  created:         'Assign Driver',
+  driver_assigned: 'Mark Picked Up',
+  picked_up:       'Mark Delivered',
+}
+
+function SimulateButton({ sessionId, currentStatus, onAdvance }: {
+  sessionId: string
+  currentStatus: string | null
+  onAdvance: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const status = currentStatus ?? 'created'
+  const nextLabel = NEXT_STATUS_LABEL[status]
+
+  if (done || !nextLabel) return (
+    <div className="px-4 py-2.5 bg-green-900/30 border border-green-700/40 rounded-xl text-xs text-green-300 text-center">
+      Simulation complete — delivery marked as delivered
+    </div>
+  )
+
+  async function advance() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/dev/simulate-delivery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+      const data = await res.json()
+      if (data.done) setDone(true)
+      onAdvance()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="border border-dashed border-slate-600 rounded-xl p-3 space-y-2">
+      <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">Dev — simulate delivery</p>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-slate-400">
+          Current: <span className="text-slate-200 font-medium">{STATUS_LABELS[status] ?? status}</span>
+        </span>
+        <button
+          onClick={advance}
+          disabled={loading}
+          className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Advancing…' : `→ ${nextLabel}`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Inner component ───────────────────────────────────────────────────────────
 
 function SuccessContent() {
@@ -323,6 +390,16 @@ function SuccessContent() {
   }, [sessionId])
 
   const isDelivery = order?.orderType === 'delivery'
+  const isDev = process.env.NODE_ENV === 'development'
+
+  // Refresh order data (used by simulate button to pull latest status)
+  function refreshOrder() {
+    if (!sessionId) return
+    fetch(`/api/orders/${sessionId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setOrder(data) })
+      .catch(() => {})
+  }
 
   // Two-column layout for delivery orders; single column for pickup
   if (isDelivery && order) {
@@ -363,6 +440,14 @@ function SuccessContent() {
                 </div>
               )}
             </div>
+
+            {isDev && (
+              <SimulateButton
+                sessionId={order.sessionId}
+                currentStatus={order.deliveryStatus}
+                onAdvance={refreshOrder}
+              />
+            )}
 
             <Link
               href="/menu"
