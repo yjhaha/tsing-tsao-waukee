@@ -133,8 +133,7 @@
           "id": "fr-1",
           "name": "Combination Fried Rice",
           "description": "A combination of chicken, beef, shrimp, and pork",
-          "price": 14.99,
-          "popular": true
+          "price": 14.99
         },
         {
           "id": "fr-2",

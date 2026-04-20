@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useId } from 'react'
+import { useState, useId, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
@@ -30,9 +30,10 @@ interface AddressFormProps {
   error: string | null
   quoted: boolean
   quote: DeliveryQuote | null
+  streetRef?: React.RefObject<HTMLInputElement | null>
 }
 
-function AddressForm({ address, onChange, onValidate, validating, error, quoted, quote }: AddressFormProps) {
+function AddressForm({ address, onChange, onValidate, validating, error, quoted, quote, streetRef }: AddressFormProps) {
   const prefix = useId()
 
   function set(field: keyof DeliveryAddress, value: string) {
@@ -60,9 +61,10 @@ function AddressForm({ address, onChange, onValidate, validating, error, quoted,
               Street Address <span className="text-red-400">*</span>
             </label>
             <input
+              ref={streetRef as React.RefObject<HTMLInputElement>}
               id={`${prefix}-street`}
               type="text"
-              autoComplete="address-line1"
+              autoComplete="off"
               placeholder="123 Main St"
               value={address?.street ?? ''}
               onChange={e => set('street', e.target.value)}
@@ -176,7 +178,7 @@ function AddressForm({ address, onChange, onValidate, validating, error, quoted,
 export default function CartPage() {
   const {
     items, total, count, updateQuantity, removeItem,
-    orderMode,
+    orderMode, setOrderMode,
     deliveryAddress, setDeliveryAddress,
     deliveryQuote, setDeliveryQuote,
     tipCents, setTipCents,
@@ -189,11 +191,84 @@ export default function CartPage() {
   const [validating, setValidating] = useState(false)
   const [customTip, setCustomTip] = useState('')
 
+  const streetInputRef = useRef<HTMLInputElement | null>(null)
+  const autocompleteRef = useRef<any>(null)
+
   const TIP_PRESETS = [0, 200, 300, 500] // cents
 
   const isDelivery = orderMode === 'delivery'
   const deliveryReady = isDelivery && !!deliveryQuote
   const canCheckout = !isDelivery || deliveryReady
+
+  // ── Pickup / Delivery toggle ──────────────────────────────────────────────
+
+  function handleSetOrderMode(mode: 'pickup' | 'delivery') {
+    setOrderMode(mode)
+    if (mode === 'pickup') {
+      setDeliveryQuote(null)
+      setTipCents(0)
+    }
+  }
+
+  // ── Google Places Autocomplete ────────────────────────────────────────────
+
+  const handlePlaceChanged = useCallback(() => {
+    if (!autocompleteRef.current) return
+    const place = autocompleteRef.current.getPlace()
+    if (!place?.address_components) return
+
+    let street = '', city = '', state = '', zip = ''
+    let streetNumber = '', route = ''
+
+    for (const component of place.address_components) {
+      const types = component.types
+      if (types.includes('street_number')) streetNumber = component.long_name
+      if (types.includes('route')) route = component.long_name
+      if (types.includes('locality')) city = component.long_name
+      if (types.includes('administrative_area_level_1')) state = component.short_name
+      if (types.includes('postal_code')) zip = component.long_name
+    }
+    street = [streetNumber, route].filter(Boolean).join(' ')
+
+    setDeliveryAddress({
+      street,
+      unit: deliveryAddress?.unit ?? '',
+      city,
+      state,
+      zip,
+    })
+    setDeliveryQuote(null)
+  }, [deliveryAddress?.unit, setDeliveryAddress, setDeliveryQuote])
+
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY
+    if (!key || !streetInputRef.current) return
+
+    function attach() {
+      if (!streetInputRef.current || !(window as any).google?.maps?.places) return
+      autocompleteRef.current = new (window as any).google.maps.places.Autocomplete(
+        streetInputRef.current,
+        { types: ['address'], componentRestrictions: { country: 'us' }, fields: ['address_components'] },
+      )
+      autocompleteRef.current.addListener('place_changed', handlePlaceChanged)
+    }
+
+    if ((window as any).google?.maps?.places) { attach(); return }
+
+    if (document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]')) {
+      const iv = setInterval(() => {
+        if ((window as any).google?.maps?.places) { clearInterval(iv); attach() }
+      }, 100)
+      return () => clearInterval(iv)
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.onload = attach
+    document.head.appendChild(script)
+  }, [handlePlaceChanged])
 
   // ── Address validation ───────────────────────────────────────────────────
 
@@ -268,17 +343,33 @@ export default function CartPage() {
       <NavBar />
 
       <div className="max-w-lg mx-auto px-4 pt-20 pb-12">
-        <h1 className="font-display italic text-3xl text-white mb-1">Your Order</h1>
-        {isDelivery && (
-          <p className="text-brand-gold text-xs font-semibold uppercase tracking-wide mb-5 flex items-center gap-1.5">
-            <FaMotorcycle className="text-sm" /> Delivery
-          </p>
-        )}
-        {!isDelivery && (
-          <p className="text-brand-gold text-xs font-semibold uppercase tracking-wide mb-5 flex items-center gap-1.5">
+        <h1 className="font-display italic text-3xl text-white mb-3">Your Order</h1>
+
+        {/* Pickup / Delivery toggle */}
+        <div className="flex gap-2 mb-5 p-1 bg-slate-800 rounded-xl">
+          <button
+            type="button"
+            onClick={() => handleSetOrderMode('pickup')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              !isDelivery
+                ? 'bg-brand-gold text-slate-900'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
             <FaShoppingBag className="text-xs" /> Pickup
-          </p>
-        )}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSetOrderMode('delivery')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              isDelivery
+                ? 'bg-brand-gold text-slate-900'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <FaMotorcycle className="text-sm" /> Delivery
+          </button>
+        </div>
 
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -354,6 +445,7 @@ export default function CartPage() {
                 error={addressError}
                 quoted={!!deliveryQuote}
                 quote={deliveryQuote}
+                streetRef={streetInputRef}
               />
             )}
 
