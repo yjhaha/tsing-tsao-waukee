@@ -130,7 +130,7 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-8">
       <h1 className="font-display italic text-4xl text-white">Kitchen Display</h1>
-      <p className="text-slate-400 text-sm">Enter your 4-digit PIN</p>
+      <p className="text-slate-300 text-sm">Enter your 4-digit PIN</p>
       <div className="flex gap-4">
         {digits.map((d, i) => (
           <input
@@ -228,7 +228,7 @@ function OrderCard({
             )}
             {/* Delivery/Pickup badge */}
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-              isDelivery ? 'bg-brand-gold/20 text-brand-gold' : 'bg-slate-700 text-slate-400'
+              isDelivery ? 'bg-brand-gold/20 text-brand-gold' : 'bg-slate-700 text-slate-200'
             }`}>
               {isDelivery ? <><FaMotorcycle /> Delivery</> : <><FaShoppingBag /> Pickup</>}
             </span>
@@ -242,7 +242,7 @@ function OrderCard({
               {timeAgo(order.createdAt)}
             </p>
           ) : (
-            <p className="text-slate-400 text-xs mt-0.5">{timeAgo(order.createdAt)}</p>
+            <p className="text-slate-300 text-xs mt-0.5">{timeAgo(order.createdAt)}</p>
           )}
         </div>
         <div className="text-right shrink-0">
@@ -260,8 +260,8 @@ function OrderCard({
 
       {/* Delivery address */}
       {isDelivery && order.deliveryAddress && (
-        <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-2">
-          <p className="text-slate-500 font-medium mb-0.5 uppercase tracking-wide text-[10px]">Drop off</p>
+        <div className="text-xs text-slate-300 bg-slate-900/50 rounded-lg px-3 py-2">
+          <p className="text-slate-400 font-medium mb-0.5 uppercase tracking-wide text-[10px]">Drop off</p>
           <p>
             {order.deliveryAddress.street}
             {order.deliveryAddress.unit ? ` #${order.deliveryAddress.unit}` : ''},&nbsp;
@@ -293,7 +293,7 @@ function OrderCard({
               <span className="text-brand-gold font-bold mr-1.5">{item.quantity}×</span>
               {item.name}
             </span>
-            <span className="text-slate-500 text-xs tabular-nums shrink-0">{fmt(item.amount_total)}</span>
+            <span className="text-slate-400 text-xs tabular-nums shrink-0">{fmt(item.amount_total)}</span>
           </li>
         ))}
       </ul>
@@ -461,7 +461,7 @@ function KitchenDisplay() {
             </span>
           )}
         </div>
-        <div className="text-slate-500 text-xs text-right">
+        <div className="text-slate-400 text-xs text-right">
           <p>Refreshing in {countdown}s</p>
           {lastUpdated && <p>Updated {lastUpdated.toLocaleTimeString()}</p>}
         </div>
@@ -470,8 +470,8 @@ function KitchenDisplay() {
       <div className="p-4 max-w-5xl mx-auto">
         {active.length === 0 && done.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <p className="text-slate-500 text-lg">No orders in the last 24 hours</p>
-            <p className="text-slate-600 text-sm">Orders will appear here automatically</p>
+            <p className="text-slate-300 text-lg">No orders in the last 24 hours</p>
+            <p className="text-slate-400 text-sm">Orders will appear here automatically</p>
           </div>
         )}
 
@@ -491,7 +491,7 @@ function KitchenDisplay() {
 
         {done.length > 0 && (
           <>
-            <p className="text-slate-600 text-xs font-semibold uppercase tracking-widest mb-3">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-3">
               Completed ({done.length})
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
