@@ -140,25 +140,52 @@ function deliveryStatusConfig(theme: Theme): Record<string, { label: string; ico
 }
 
 // ── Audio chime ──────────────────────────────────────────────────────────────
-function playChime() {
+// AudioContext must be created (and resumed) inside a user gesture on mobile
+// browsers. We create it once on the PIN submit or first tap, then reuse it.
+let _audioCtx: AudioContext | null = null
+
+function unlockAudio() {
   try {
-    const ctx = new AudioContext()
-    const notes = [880, 1100, 1320, 1760]
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.value = freq
-      const t = ctx.currentTime + i * 0.12
-      gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
-      osc.start(t)
-      osc.stop(t + 0.4)
-    })
-  } catch { /* silently ignore if audio context is unavailable */ }
+    if (!_audioCtx) {
+      _audioCtx = new AudioContext()
+      // iOS Safari requires playing a silent buffer to fully unlock the context
+      const buf = _audioCtx.createBuffer(1, 1, 22050)
+      const src = _audioCtx.createBufferSource()
+      src.buffer = buf
+      src.connect(_audioCtx.destination)
+      src.start(0)
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume()
+  } catch { /* unavailable */ }
+}
+
+function playChime() {
+  const ctx = _audioCtx
+  if (!ctx) return
+  const doPlay = () => {
+    try {
+      const notes = [880, 1100, 1320, 1760]
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        const t = ctx.currentTime + i * 0.12
+        gain.gain.setValueAtTime(0, t)
+        gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
+        osc.start(t)
+        osc.stop(t + 0.4)
+      })
+    } catch { /* silently ignore */ }
+  }
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(doPlay)
+  } else {
+    doPlay()
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -249,6 +276,7 @@ function PinGate({
     if (val && i === 3) {
       const pin = [...next.slice(0, 3), val.slice(-1)].join('')
       if (pin === PIN) {
+        unlockAudio() // must run inside this user-gesture handler
         sessionStorage.setItem('kitchen_auth', '1')
         onUnlock()
       } else {
@@ -691,6 +719,15 @@ export default function KitchenPage() {
   useEffect(() => {
     setTheme(loadTheme())
     if (sessionStorage.getItem('kitchen_auth') === '1') setUnlocked(true)
+  }, [])
+
+  // When already authenticated (sessionStorage bypass), there is no PIN submit
+  // to unlock the AudioContext. Register a one-time pointer listener so the
+  // first tap on the kitchen screen unlocks audio instead.
+  useEffect(() => {
+    const handler = () => { unlockAudio() }
+    window.addEventListener('pointerdown', handler, { once: true })
+    return () => window.removeEventListener('pointerdown', handler)
   }, [])
 
   function toggleTheme() {
