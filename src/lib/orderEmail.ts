@@ -12,7 +12,8 @@ export interface OrderEmailData {
   customerPhone?: string
   orderType: string // 'pickup' | 'delivery'
   items: OrderEmailItem[]
-  amountTotal: number // in cents
+  amountTotal: number // in cents (includes tax)
+  taxTotal?: number   // in cents
   sessionId: string
   // Delivery extras
   deliveryAddress?: DeliveryAddress
@@ -61,7 +62,7 @@ function formatDeliveryAddress(a: DeliveryAddress): string {
 export function buildOrderEmailHtml(data: OrderEmailData): string {
   const {
     customerEmail, customerName, customerPhone,
-    orderType, items, amountTotal, sessionId,
+    orderType, items, amountTotal, taxTotal, sessionId,
     deliveryAddress, deliveryTrackingUrl, dropoffEtaAt,
   } = data
 
@@ -260,9 +261,14 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
           <tr>
             <td style="padding: 0 36px 24px;">
               <table width="100%" cellpadding="0" cellspacing="0">
+                ${taxTotal ? `
                 <tr>
-                  <td style="font-size:16px;font-weight:700;color:#ffffff;">Total</td>
-                  <td style="font-size:20px;font-weight:800;color:#D4AF37;text-align:right;">${formatCurrency(amountTotal)}</td>
+                  <td style="font-size:13px;color:#8f4a58;padding-bottom:4px;">Tax</td>
+                  <td style="font-size:13px;color:#8f4a58;text-align:right;padding-bottom:4px;">${formatCurrency(taxTotal)}</td>
+                </tr>` : ''}
+                <tr>
+                  <td style="font-size:16px;font-weight:700;color:#ffffff;${taxTotal ? 'border-top:1px solid #560020;padding-top:8px;' : ''}">Total</td>
+                  <td style="font-size:20px;font-weight:800;color:#D4AF37;text-align:right;${taxTotal ? 'border-top:1px solid #560020;padding-top:8px;' : ''}">${formatCurrency(amountTotal)}</td>
                 </tr>
               </table>
             </td>
@@ -295,7 +301,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
 
 export function buildOrderEmailText(data: OrderEmailData): string {
   const {
-    customerEmail, customerPhone, orderType, items, amountTotal, sessionId,
+    customerEmail, customerPhone, orderType, items, amountTotal, taxTotal, sessionId,
     deliveryAddress, deliveryTrackingUrl,
   } = data
 
@@ -322,6 +328,7 @@ export function buildOrderEmailText(data: OrderEmailData): string {
     '-----',
     ...items.map(i => `${i.name} x${i.quantity}  ${formatCurrency(i.amount_total)}`),
     '',
+    ...(taxTotal ? [`Tax: ${formatCurrency(taxTotal)}`] : []),
     `TOTAL: ${formatCurrency(amountTotal)}`,
     '',
     isDelivery && deliveryTrackingUrl

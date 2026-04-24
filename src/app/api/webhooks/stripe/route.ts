@@ -122,6 +122,8 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     }
   }
 
+  const taxTotal = session.total_details?.amount_tax ?? 0
+
   // ── Save to order store ────────────────────────────────────────────────────
   await saveOrder({
     sessionId: session.id,
@@ -132,6 +134,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     orderType,
     items,
     amountTotal: session.amount_total ?? 0,
+    taxTotal: taxTotal > 0 ? taxTotal : undefined,
     deliveryAddress,
     externalDeliveryId,
     deliveryTrackingUrl,
@@ -150,6 +153,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     orderType,
     items,
     amountTotal: session.amount_total ?? 0,
+    taxTotal: taxTotal > 0 ? taxTotal : undefined,
     sessionId: session.id,
     deliveryAddress,
     deliveryTrackingUrl,
