@@ -8,6 +8,8 @@ import {
   FaShoppingBag,
   FaCheckCircle,
   FaExclamationTriangle,
+  FaSun,
+  FaMoon,
 } from 'react-icons/fa'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -32,15 +34,108 @@ interface Order {
 }
 
 type OrderStatus = 'new' | 'active' | 'ready'
+type Theme = 'light' | 'dark'
+
+// ── Theme tokens ─────────────────────────────────────────────────────────────
+// The global tailwind config overrides the `slate` palette to crimson/red for
+// the customer-facing site. The kitchen UI intentionally opts out of that
+// brand theming in favor of neutral, high-contrast grays so it reads at a
+// glance on a busy line. We use Tailwind's default `zinc` palette (untouched
+// by the global override) for pure charcoal/white surfaces.
+function tokens(theme: Theme) {
+  if (theme === 'light') {
+    return {
+      page: 'bg-white text-zinc-900',
+      topBar: 'bg-white/95 border-zinc-200',
+      heading: 'text-zinc-900',
+      muted: 'text-zinc-500',
+      subtle: 'text-zinc-400',
+      hint: 'text-zinc-600',
+      card: 'bg-white border-zinc-200 shadow-sm',
+      cardNew: 'bg-white border-amber-500 shadow-md',
+      cardReady: 'bg-zinc-50 border-zinc-200 opacity-70',
+      cardTitle: 'text-zinc-900',
+      itemText: 'text-zinc-800',
+      itemPrice: 'text-zinc-500',
+      dropoffBox: 'bg-zinc-100 text-zinc-700',
+      dropoffLabel: 'text-zinc-500',
+      accent: 'text-amber-600',
+      accentInactive: 'text-zinc-400',
+      badgeNew: 'bg-amber-500 text-white',
+      badgeReady: 'bg-green-600 text-white',
+      badgeActiveCount: 'bg-amber-500 text-white',
+      badgeDeliveryCount: 'bg-amber-500 text-white',
+      badgePickupCount: 'bg-zinc-200 text-zinc-800',
+      badgeDelivery: 'bg-amber-100 text-amber-800',
+      badgePickup: 'bg-zinc-100 text-zinc-700',
+      btnReady: 'bg-green-600 hover:bg-green-700 text-white',
+      btnReopen: 'bg-zinc-200 hover:bg-zinc-300 text-zinc-800',
+      overdue: 'text-red-600',
+      errorText: 'text-red-600',
+      pinInput: 'bg-white text-zinc-900 border-zinc-300',
+      pinFocus: 'focus:border-amber-500',
+      pinError: 'border-red-500',
+      toggle: 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-200',
+      completedLabel: 'text-zinc-500',
+    }
+  }
+  // dark / charcoal
+  return {
+    page: 'bg-zinc-950 text-white',
+    topBar: 'bg-zinc-900/95 border-zinc-800',
+    heading: 'text-white',
+    muted: 'text-zinc-400',
+    subtle: 'text-zinc-500',
+    hint: 'text-zinc-400',
+    card: 'bg-zinc-800 border-zinc-700',
+    cardNew: 'bg-zinc-800 border-amber-400',
+    cardReady: 'bg-zinc-900 border-zinc-800 opacity-60',
+    cardTitle: 'text-white',
+    itemText: 'text-zinc-200',
+    itemPrice: 'text-zinc-500',
+    dropoffBox: 'bg-zinc-900/60 text-zinc-300',
+    dropoffLabel: 'text-zinc-500',
+    accent: 'text-amber-400',
+    accentInactive: 'text-zinc-500',
+    badgeNew: 'bg-amber-400 text-zinc-900',
+    badgeReady: 'bg-green-700 text-green-100',
+    badgeActiveCount: 'bg-amber-400 text-zinc-900',
+    badgeDeliveryCount: 'bg-amber-400 text-zinc-900',
+    badgePickupCount: 'bg-zinc-700 text-zinc-200',
+    badgeDelivery: 'bg-amber-400/15 text-amber-300',
+    badgePickup: 'bg-zinc-700 text-zinc-300',
+    btnReady: 'bg-green-600 hover:bg-green-500 text-white',
+    btnReopen: 'bg-zinc-700 hover:bg-zinc-600 text-zinc-200',
+    overdue: 'text-red-400',
+    errorText: 'text-red-400',
+    pinInput: 'bg-zinc-800 text-white border-zinc-600',
+    pinFocus: 'focus:border-amber-400',
+    pinError: 'border-red-500',
+    toggle: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700',
+    completedLabel: 'text-zinc-500',
+  }
+}
 
 // ── Delivery status display config ───────────────────────────────────────────
-const DELIVERY_STATUS_CONFIG: Record<string, { label: string; icon: JSX.Element; color: string }> = {
-  created: { label: 'Awaiting driver', icon: <FaClock />, color: 'bg-slate-600 text-slate-200' },
-  driver_assigned: { label: 'Driver assigned', icon: <FaMotorcycle />, color: 'bg-brand-gold text-slate-900' },
-  picked_up: { label: 'Picked up', icon: <FaShoppingBag />, color: 'bg-amber-700 text-amber-100' },
-  delivered: { label: 'Delivered', icon: <FaCheckCircle />, color: 'bg-green-700 text-green-100' },
-  cancelled: { label: 'Cancelled', icon: <FaExclamationTriangle />, color: 'bg-red-700 text-red-100' },
-  failed: { label: 'Failed', icon: <FaExclamationTriangle />, color: 'bg-red-700 text-red-100' },
+function deliveryStatusConfig(theme: Theme): Record<string, { label: string; icon: JSX.Element; color: string }> {
+  if (theme === 'light') {
+    return {
+      created:         { label: 'Awaiting driver',  icon: <FaClock />,                color: 'bg-zinc-200 text-zinc-800' },
+      driver_assigned: { label: 'Driver assigned',  icon: <FaMotorcycle />,           color: 'bg-amber-500 text-white' },
+      picked_up:       { label: 'Picked up',        icon: <FaShoppingBag />,          color: 'bg-amber-200 text-amber-900' },
+      delivered:       { label: 'Delivered',        icon: <FaCheckCircle />,          color: 'bg-green-100 text-green-800' },
+      cancelled:       { label: 'Cancelled',        icon: <FaExclamationTriangle />,  color: 'bg-red-100 text-red-800' },
+      failed:          { label: 'Failed',           icon: <FaExclamationTriangle />,  color: 'bg-red-100 text-red-800' },
+    }
+  }
+  return {
+    created:         { label: 'Awaiting driver',  icon: <FaClock />,                color: 'bg-zinc-700 text-zinc-200' },
+    driver_assigned: { label: 'Driver assigned',  icon: <FaMotorcycle />,           color: 'bg-amber-400 text-zinc-900' },
+    picked_up:       { label: 'Picked up',        icon: <FaShoppingBag />,          color: 'bg-amber-700 text-amber-100' },
+    delivered:       { label: 'Delivered',        icon: <FaCheckCircle />,          color: 'bg-green-700 text-green-100' },
+    cancelled:       { label: 'Cancelled',        icon: <FaExclamationTriangle />,  color: 'bg-red-700 text-red-100' },
+    failed:          { label: 'Failed',           icon: <FaExclamationTriangle />,  color: 'bg-red-700 text-red-100' },
+  }
 }
 
 // ── Audio chime ──────────────────────────────────────────────────────────────
@@ -88,8 +183,50 @@ function fmt(cents: number) {
 const POLL_INTERVAL = 10_000
 const PIN = process.env.NEXT_PUBLIC_KITCHEN_PIN ?? '0000'
 
+// ── Theme storage ────────────────────────────────────────────────────────────
+const THEME_KEY = 'kitchen_theme'
+
+function loadTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark'
+  try {
+    const raw = localStorage.getItem(THEME_KEY)
+    return raw === 'light' ? 'light' : 'dark'
+  } catch {
+    return 'dark'
+  }
+}
+
+function saveTheme(theme: Theme) {
+  try { localStorage.setItem(THEME_KEY, theme) } catch { /* ignore */ }
+}
+
+// ── Theme Toggle ─────────────────────────────────────────────────────────────
+function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
+  const t = tokens(theme)
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={`inline-flex items-center justify-center w-9 h-9 rounded-lg border transition-colors ${t.toggle}`}
+    >
+      {theme === 'dark' ? <FaSun className="w-4 h-4" /> : <FaMoon className="w-4 h-4" />}
+    </button>
+  )
+}
+
 // ── PIN Gate ─────────────────────────────────────────────────────────────────
-function PinGate({ onUnlock }: { onUnlock: () => void }) {
+function PinGate({
+  theme,
+  onToggleTheme,
+  onUnlock,
+}: {
+  theme: Theme
+  onToggleTheme: () => void
+  onUnlock: () => void
+}) {
+  const t = tokens(theme)
   const [digits, setDigits] = useState(['', '', '', ''])
   const [error, setError] = useState(false)
   const refs = [
@@ -128,9 +265,12 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-8">
-      <h1 className="font-display italic text-4xl text-white">Kitchen Display</h1>
-      <p className="text-slate-300 text-sm">Enter your 4-digit PIN</p>
+    <div className={`min-h-screen flex flex-col items-center justify-center gap-8 relative ${t.page}`}>
+      <div className="absolute top-4 right-4">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
+      <h1 className={`font-display italic text-4xl ${t.heading}`}>Kitchen Display</h1>
+      <p className={`text-sm ${t.muted}`}>Enter your 4-digit PIN</p>
       <div className="flex gap-4">
         {digits.map((d, i) => (
           <input
@@ -142,20 +282,30 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
             value={d}
             onChange={e => handleDigit(i, e.target.value)}
             onKeyDown={e => handleKey(i, e)}
-            className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 bg-slate-800 text-white outline-none transition-colors ${
-              error ? 'border-red-500' : 'border-slate-600 focus:border-brand-gold'
+            className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 outline-none transition-colors ${t.pinInput} ${
+              error ? t.pinError : t.pinFocus
             }`}
           />
         ))}
       </div>
-      {error && <p className="text-red-400 text-sm">Incorrect PIN</p>}
+      {error && <p className={`text-sm ${t.errorText}`}>Incorrect PIN</p>}
     </div>
   )
 }
 
 // ── Delivery Status Badge ─────────────────────────────────────────────────────
-function DeliveryStatusBadge({ status, trackingUrl }: { status?: string; trackingUrl?: string }) {
-  const config = status ? DELIVERY_STATUS_CONFIG[status] : DELIVERY_STATUS_CONFIG.created
+function DeliveryStatusBadge({
+  theme,
+  status,
+  trackingUrl,
+}: {
+  theme: Theme
+  status?: string
+  trackingUrl?: string
+}) {
+  const t = tokens(theme)
+  const statusMap = deliveryStatusConfig(theme)
+  const config = status ? statusMap[status] : statusMap.created
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -168,7 +318,7 @@ function DeliveryStatusBadge({ status, trackingUrl }: { status?: string; trackin
           href={trackingUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] font-bold text-brand-gold hover:text-yellow-300 transition-colors underline"
+          className={`text-[10px] font-bold underline transition-colors ${t.accent} hover:opacity-80`}
           onClick={e => e.stopPropagation()}
         >
           Track driver →
@@ -180,61 +330,61 @@ function DeliveryStatusBadge({ status, trackingUrl }: { status?: string; trackin
 
 // ── Order Card ────────────────────────────────────────────────────────────────
 function OrderCard({
+  theme,
   order,
   status,
   onMarkReady,
   onMarkActive,
 }: {
+  theme: Theme
   order: Order
   status: OrderStatus
   onMarkReady: () => void
   onMarkActive: () => void
 }) {
+  const t = tokens(theme)
   const [, forceUpdate] = useState(0)
   useEffect(() => {
-    const t = setInterval(() => forceUpdate(n => n + 1), 30_000)
-    return () => clearInterval(t)
+    const tick = setInterval(() => forceUpdate(n => n + 1), 30_000)
+    return () => clearInterval(tick)
   }, [])
 
   const shortId = order.sessionId.slice(-6).toUpperCase()
   const isDelivery = order.orderType === 'delivery'
 
+  const cardSurface =
+    status === 'new'
+      ? t.cardNew
+      : status === 'ready'
+      ? t.cardReady
+      : t.card
+
   return (
-    <div className={`rounded-2xl border flex flex-col gap-3 p-4 transition-colors ${
-      status === 'new'
-        ? isDelivery
-          ? 'bg-slate-800 border-brand-gold'
-          : 'bg-slate-800 border-brand-gold'
-        : status === 'ready'
-        ? 'bg-slate-900 border-slate-700 opacity-60'
-        : 'bg-slate-800 border-slate-700'
-    }`}>
+    <div className={`rounded-2xl border flex flex-col gap-3 p-4 transition-colors ${cardSurface}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-bold text-lg">#{shortId}</span>
+            <span className={`font-bold text-lg ${t.cardTitle}`}>#{shortId}</span>
             {status === 'new' && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-                isDelivery ? 'bg-brand-gold text-slate-900' : 'bg-brand-gold text-slate-900'
-              }`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${t.badgeNew}`}>
                 New
               </span>
             )}
             {status === 'ready' && (
-              <span className="bg-green-700 text-green-100 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${t.badgeReady}`}>
                 Ready
               </span>
             )}
             {/* Delivery/Pickup badge */}
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
-              isDelivery ? 'bg-brand-gold/20 text-brand-gold' : 'bg-slate-700 text-slate-200'
+              isDelivery ? t.badgeDelivery : t.badgePickup
             }`}>
               {isDelivery ? <><FaMotorcycle /> Delivery</> : <><FaShoppingBag /> Pickup</>}
             </span>
           </div>
           {status !== 'ready' && isOverdue(order.createdAt) ? (
-            <p className="text-red-400 text-xs mt-0.5 flex items-center gap-1">
+            <p className={`text-xs mt-0.5 flex items-center gap-1 ${t.overdue}`}>
               <svg xmlns="http://www.w3.org/2000/svg" className="inline w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
@@ -242,17 +392,18 @@ function OrderCard({
               {timeAgo(order.createdAt)}
             </p>
           ) : (
-            <p className="text-slate-300 text-xs mt-0.5">{timeAgo(order.createdAt)}</p>
+            <p className={`text-xs mt-0.5 ${t.muted}`}>{timeAgo(order.createdAt)}</p>
           )}
         </div>
         <div className="text-right shrink-0">
-          <p className="text-white font-bold">{fmt(order.amountTotal)}</p>
+          <p className={`font-bold ${t.cardTitle}`}>{fmt(order.amountTotal)}</p>
         </div>
       </div>
 
       {/* Delivery status */}
       {isDelivery && (
         <DeliveryStatusBadge
+          theme={theme}
           status={order.deliveryStatus}
           trackingUrl={order.deliveryTrackingUrl}
         />
@@ -260,8 +411,8 @@ function OrderCard({
 
       {/* Delivery address */}
       {isDelivery && order.deliveryAddress && (
-        <div className="text-xs text-slate-300 bg-slate-900/50 rounded-lg px-3 py-2">
-          <p className="text-slate-400 font-medium mb-0.5 uppercase tracking-wide text-[10px]">Drop off</p>
+        <div className={`text-xs rounded-lg px-3 py-2 ${t.dropoffBox}`}>
+          <p className={`font-medium mb-0.5 uppercase tracking-wide text-[10px] ${t.dropoffLabel}`}>Drop off</p>
           <p>
             {order.deliveryAddress.street}
             {order.deliveryAddress.unit ? ` #${order.deliveryAddress.unit}` : ''},&nbsp;
@@ -273,11 +424,11 @@ function OrderCard({
       {/* Customer info */}
       {(order.customerName || order.customerPhone) && (
         <div className="text-sm">
-          {order.customerName && <p className="text-white font-medium">{order.customerName}</p>}
+          {order.customerName && <p className={`font-medium ${t.cardTitle}`}>{order.customerName}</p>}
           {order.customerPhone && (
             <a
               href={`tel:${order.customerPhone}`}
-              className={`font-medium ${status !== 'ready' ? 'text-brand-gold' : 'text-slate-500'}`}
+              className={`font-medium ${status !== 'ready' ? t.accent : t.accentInactive}`}
             >
               {order.customerPhone}
             </a>
@@ -289,11 +440,11 @@ function OrderCard({
       <ul className="space-y-1">
         {order.items.map((item, i) => (
           <li key={i} className="flex items-baseline justify-between gap-2">
-            <span className="text-slate-200 text-sm">
-              <span className="text-brand-gold font-bold mr-1.5">{item.quantity}×</span>
+            <span className={`text-sm ${t.itemText}`}>
+              <span className={`font-bold mr-1.5 ${t.accent}`}>{item.quantity}×</span>
               {item.name}
             </span>
-            <span className="text-slate-400 text-xs tabular-nums shrink-0">{fmt(item.amount_total)}</span>
+            <span className={`text-xs tabular-nums shrink-0 ${t.itemPrice}`}>{fmt(item.amount_total)}</span>
           </li>
         ))}
       </ul>
@@ -303,7 +454,7 @@ function OrderCard({
         <button
           type="button"
           onClick={onMarkReady}
-          className="mt-1 w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition-colors active:scale-95"
+          className={`mt-1 w-full py-2.5 rounded-xl font-semibold text-sm transition-colors active:scale-95 ${t.btnReady}`}
         >
           {isDelivery ? 'Ready for Pickup by Driver' : 'Mark Ready'}
         </button>
@@ -311,7 +462,7 @@ function OrderCard({
         <button
           type="button"
           onClick={onMarkActive}
-          className="mt-1 w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold text-sm transition-colors"
+          className={`mt-1 w-full py-2.5 rounded-xl font-semibold text-sm transition-colors ${t.btnReopen}`}
         >
           Reopen
         </button>
@@ -338,7 +489,14 @@ function saveStoredStatuses(statuses: Record<string, OrderStatus>) {
 }
 
 // ── Kitchen Display ───────────────────────────────────────────────────────────
-function KitchenDisplay() {
+function KitchenDisplay({
+  theme,
+  onToggleTheme,
+}: {
+  theme: Theme
+  onToggleTheme: () => void
+}) {
+  const t = tokens(theme)
   const [orders, setOrders] = useState<Order[]>([])
   const [statuses, setStatuses] = useState<Record<string, OrderStatus>>({})
   const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
@@ -398,11 +556,11 @@ function KitchenDisplay() {
 
   // Countdown ticker
   useEffect(() => {
-    const t = setInterval(() => {
+    const tick = setInterval(() => {
       countdownRef.current = Math.max(0, countdownRef.current - 1)
       setCountdown(countdownRef.current)
     }, 1000)
-    return () => clearInterval(t)
+    return () => clearInterval(tick)
   }, [])
 
   function getStatus(id: string): OrderStatus {
@@ -440,38 +598,41 @@ function KitchenDisplay() {
   const pickupCount = active.filter(o => o.orderType !== 'delivery').length
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className={`min-h-screen ${t.page}`}>
       {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      <div className={`sticky top-0 z-10 backdrop-blur border-b px-4 py-3 flex items-center justify-between gap-3 ${t.topBar}`}>
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="font-display italic text-xl text-white">Kitchen Display</h1>
+          <h1 className={`font-display italic text-xl ${t.heading}`}>Kitchen Display</h1>
           {active.length > 0 && (
-            <span className="bg-brand-gold text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${t.badgeActiveCount}`}>
               {active.length} active
             </span>
           )}
           {deliveryCount > 0 && (
-            <span className="inline-flex items-center gap-1 bg-brand-gold text-slate-900 text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${t.badgeDeliveryCount}`}>
               <FaMotorcycle /> {deliveryCount} delivery
             </span>
           )}
           {pickupCount > 0 && (
-            <span className="inline-flex items-center gap-1 bg-slate-700 text-slate-200 text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${t.badgePickupCount}`}>
               <FaShoppingBag /> {pickupCount} pickup
             </span>
           )}
         </div>
-        <div className="text-slate-400 text-xs text-right">
-          <p>Refreshing in {countdown}s</p>
-          {lastUpdated && <p>Updated {lastUpdated.toLocaleTimeString()}</p>}
+        <div className="flex items-center gap-3">
+          <div className={`text-xs text-right ${t.subtle}`}>
+            <p>Refreshing in {countdown}s</p>
+            {lastUpdated && <p>Updated {lastUpdated.toLocaleTimeString()}</p>}
+          </div>
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
       </div>
 
       <div className="p-4 max-w-5xl mx-auto">
         {active.length === 0 && done.length === 0 && (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <p className="text-slate-300 text-lg">No orders in the last 24 hours</p>
-            <p className="text-slate-400 text-sm">Orders will appear here automatically</p>
+            <p className={`text-lg ${t.muted}`}>No orders in the last 24 hours</p>
+            <p className={`text-sm ${t.subtle}`}>Orders will appear here automatically</p>
           </div>
         )}
 
@@ -480,6 +641,7 @@ function KitchenDisplay() {
             {active.map(o => (
               <OrderCard
                 key={o.sessionId}
+                theme={theme}
                 order={o}
                 status={getStatus(o.sessionId)}
                 onMarkReady={() => markReady(o.sessionId)}
@@ -491,13 +653,14 @@ function KitchenDisplay() {
 
         {done.length > 0 && (
           <>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-3">
+            <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${t.completedLabel}`}>
               Completed ({done.length})
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {done.map(o => (
                 <OrderCard
                   key={o.sessionId}
+                  theme={theme}
                   order={o}
                   status="ready"
                   onMarkReady={() => markReady(o.sessionId)}
@@ -515,11 +678,24 @@ function KitchenDisplay() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function KitchenPage() {
   const [unlocked, setUnlocked] = useState(false)
+  const [theme, setTheme] = useState<Theme>('dark')
 
+  // Hydrate theme + auth from storage on mount
   useEffect(() => {
+    setTheme(loadTheme())
     if (sessionStorage.getItem('kitchen_auth') === '1') setUnlocked(true)
   }, [])
 
-  if (!unlocked) return <PinGate onUnlock={() => setUnlocked(true)} />
-  return <KitchenDisplay />
+  function toggleTheme() {
+    setTheme(prev => {
+      const next: Theme = prev === 'dark' ? 'light' : 'dark'
+      saveTheme(next)
+      return next
+    })
+  }
+
+  if (!unlocked) {
+    return <PinGate theme={theme} onToggleTheme={toggleTheme} onUnlock={() => setUnlocked(true)} />
+  }
+  return <KitchenDisplay theme={theme} onToggleTheme={toggleTheme} />
 }
