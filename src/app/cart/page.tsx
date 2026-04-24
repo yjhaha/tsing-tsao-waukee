@@ -526,10 +526,16 @@ export default function CartPage() {
                 </>
               )}
 
+              <div className="flex justify-between text-sm text-slate-400 mb-1">
+                <span>Tax</span>
+                <span className="italic">Calculated at checkout</span>
+              </div>
+
               <div className="flex justify-between font-bold text-white text-base border-t border-slate-700 pt-2 mt-2">
                 <span>Total</span>
                 <span className="tabular-nums">
                   {isDelivery && deliveryQuote ? fmt(grandTotal) : fmt(total)}
+                  <span className="text-slate-400 font-normal text-sm"> + tax</span>
                 </span>
               </div>
             </div>

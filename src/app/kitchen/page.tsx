@@ -27,6 +27,7 @@ interface Order {
   orderType: string
   items: OrderItem[]
   amountTotal: number
+  taxTotal?: number
   // Delivery fields
   deliveryAddress?: DeliveryAddress
   deliveryTrackingUrl?: string
@@ -447,6 +448,12 @@ function OrderCard({
             <span className={`text-xs tabular-nums shrink-0 ${t.itemPrice}`}>{fmt(item.amount_total)}</span>
           </li>
         ))}
+        {order.taxTotal ? (
+          <li className="flex items-baseline justify-between gap-2 border-t border-zinc-200/60 dark:border-zinc-700/60 pt-1 mt-1">
+            <span className={`text-xs ${t.muted}`}>Tax</span>
+            <span className={`text-xs tabular-nums shrink-0 ${t.muted}`}>{fmt(order.taxTotal)}</span>
+          </li>
+        ) : null}
       </ul>
 
       {/* Actions */}

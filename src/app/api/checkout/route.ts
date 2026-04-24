@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       price_data: {
         currency: 'usd',
         unit_amount: Math.round(item.price * 100),
+        tax_behavior: 'exclusive',
         product_data: {
           name: item.name,
           ...(item.image ? { images: [`${baseUrl}${item.image}`] } : {}),
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: 'usd',
           unit_amount: deliveryQuote.customerFeeCents,
+          tax_behavior: 'exclusive',
           product_data: {
             name: 'Delivery Fee',
             description: 'Direct delivery — no third-party commission',
@@ -80,7 +82,9 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: 'usd',
           unit_amount: tipCents,
-          product_data: { name: 'Driver Tip' },
+          tax_behavior: 'exclusive',
+          // txcd_92010001 = Gratuity/Tips — excluded from tax by Stripe Tax
+          product_data: { name: 'Driver Tip', tax_code: 'txcd_92010001' },
         },
       })
     }
@@ -115,6 +119,7 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       payment_method_types: ['card'],
       line_items: lineItems,
+      automatic_tax: { enabled: true },
       metadata,
       success_url: `${baseUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/order/cancel`,

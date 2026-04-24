@@ -10,6 +10,7 @@ export interface KitchenOrder {
   orderType: string
   items: { name: string; quantity: number; amount_total: number }[]
   amountTotal: number
+  taxTotal?: number
   deliveryAddress?: DeliveryAddress
   externalDeliveryId?: string
   deliveryTrackingUrl?: string
