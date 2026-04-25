@@ -10,6 +10,7 @@ export interface CartItem {
   price: number
   image?: string
   quantity: number
+  comment?: string
 }
 
 export type OrderMode = 'pickup' | 'delivery'
@@ -17,9 +18,10 @@ export type OrderMode = 'pickup' | 'delivery'
 interface CartContextType {
   // ── Items ──────────────────────────────────────────────────────────────────
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity'>) => void
+  addItem: (item: Omit<CartItem, 'quantity' | 'comment'>) => void
   removeItem: (id: string) => void
   updateQuantity: (id: string, delta: number) => void
+  updateComment: (id: string, comment: string) => void
   total: number
   count: number
   clear: () => void
@@ -47,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null)
   const [tipCents, setTipCents] = useState<number>(0)
 
-  function addItem(incoming: Omit<CartItem, 'quantity'>) {
+  function addItem(incoming: Omit<CartItem, 'quantity' | 'comment'>) {
     setItems(prev => {
       const exists = prev.find(i => i.id === incoming.id)
       if (exists) {
@@ -59,6 +61,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function removeItem(id: string) {
     setItems(prev => prev.filter(i => i.id !== id))
+  }
+
+  function updateComment(id: string, comment: string) {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, comment: comment || undefined } : i))
   }
 
   function updateQuantity(id: string, delta: number) {
@@ -94,7 +100,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider
       value={{
-        items, addItem, removeItem, updateQuantity, total, count, clear,
+        items, addItem, removeItem, updateQuantity, updateComment, total, count, clear,
         orderMode, setOrderMode,
         deliveryAddress, setDeliveryAddress: handleSetDeliveryAddress,
         deliveryQuote, setDeliveryQuote,

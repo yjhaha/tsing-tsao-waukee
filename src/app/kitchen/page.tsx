@@ -13,25 +13,28 @@ import {
 } from 'react-icons/fa'
 
 // ── Types ────────────────────────────────────────────────────────────────────
-interface OrderItem {
-  name: string
-  quantity: number
-  amount_total: number
-}
-
 interface Order {
   sessionId: string
   createdAt: number
   customerName?: string
   customerPhone?: string
   orderType: string
+  status?: string
   items: OrderItem[]
   amountTotal: number
   taxTotal?: number
+  scheduledFor?: string
   // Delivery fields
   deliveryAddress?: DeliveryAddress
   deliveryTrackingUrl?: string
   deliveryStatus?: string
+}
+
+interface OrderItem {
+  name: string
+  quantity: number
+  amount_total: number
+  comment?: string
 }
 
 type OrderStatus = 'new' | 'active' | 'ready'
@@ -411,6 +414,12 @@ function OrderCard({
             }`}>
               {isDelivery ? <><FaMotorcycle /> Delivery</> : <><FaShoppingBag /> Pickup</>}
             </span>
+            {/* Scheduled badge */}
+            {order.scheduledFor && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                ⏰ Scheduled
+              </span>
+            )}
           </div>
           {status !== 'ready' && isOverdue(order.createdAt) ? (
             <p className={`text-xs mt-0.5 flex items-center gap-1 ${t.overdue}`}>
@@ -422,6 +431,11 @@ function OrderCard({
             </p>
           ) : (
             <p className={`text-xs mt-0.5 ${t.muted}`}>{timeAgo(order.createdAt)}</p>
+          )}
+          {order.scheduledFor && (
+            <p className="text-xs mt-0.5 font-semibold text-blue-400">
+              For: {new Date(order.scheduledFor).toLocaleString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+            </p>
           )}
         </div>
         <div className="text-right shrink-0">
@@ -468,12 +482,15 @@ function OrderCard({
       {/* Items */}
       <ul className="space-y-1">
         {order.items.map((item, i) => (
-          <li key={i} className="flex items-baseline justify-between gap-2">
+          <li key={i} className="flex items-start justify-between gap-2">
             <span className={`text-sm ${t.itemText}`}>
               <span className={`font-bold mr-1.5 ${t.accent}`}>{item.quantity}×</span>
               {item.name}
+              {item.comment && (
+                <span className={`block text-xs italic ml-5 ${t.muted}`}>✎ {item.comment}</span>
+              )}
             </span>
-            <span className={`text-xs tabular-nums shrink-0 ${t.itemPrice}`}>{fmt(item.amount_total)}</span>
+            <span className={`text-xs tabular-nums shrink-0 mt-0.5 ${t.itemPrice}`}>{fmt(item.amount_total)}</span>
           </li>
         ))}
         {order.taxTotal ? (
@@ -506,22 +523,6 @@ function OrderCard({
   )
 }
 
-const STORAGE_KEY = 'kitchen_ready_statuses'
-
-function loadStoredStatuses(): Record<string, OrderStatus> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveStoredStatuses(statuses: Record<string, OrderStatus>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(statuses))
-  } catch { /* ignore */ }
-}
 
 // ── Kitchen Display ───────────────────────────────────────────────────────────
 function KitchenDisplay({
@@ -533,17 +534,13 @@ function KitchenDisplay({
 }) {
   const t = tokens(theme)
   const [orders, setOrders] = useState<Order[]>([])
-  const [statuses, setStatuses] = useState<Record<string, OrderStatus>>({})
+  // Optimistic overrides — applied immediately on button tap, cleared on next poll
+  const [overrides, setOverrides] = useState<Record<string, OrderStatus>>({})
   const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const knownIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
   const countdownRef = useRef(POLL_INTERVAL / 1000)
-
-  // Load persisted ready statuses from localStorage on mount
-  useEffect(() => {
-    setStatuses(loadStoredStatuses())
-  }, [])
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -551,28 +548,22 @@ function KitchenDisplay({
       if (!res.ok) return
       const { orders: fetched }: { orders: Order[] } = await res.json()
 
-      const stored = loadStoredStatuses()
       const newOnes: string[] = []
       fetched.forEach(o => {
         if (!knownIds.current.has(o.sessionId)) {
           knownIds.current.add(o.sessionId)
-          if (!firstLoad.current && stored[o.sessionId] !== 'ready') {
+          // Only chime for genuinely new orders (not already-ready ones loaded on first poll)
+          if (!firstLoad.current && o.status !== 'ready') {
             newOnes.push(o.sessionId)
           }
         }
       })
 
-      if (newOnes.length > 0) {
-        playChime()
-        setStatuses(prev => {
-          const next = { ...prev }
-          newOnes.forEach(id => { next[id] = 'new' })
-          saveStoredStatuses(next)
-          return next
-        })
-      }
+      if (newOnes.length > 0) playChime()
 
       setOrders(fetched)
+      // Clear optimistic overrides — Redis is now the source of truth
+      setOverrides({})
       setLastUpdated(new Date())
       countdownRef.current = POLL_INTERVAL / 1000
       setCountdown(POLL_INTERVAL / 1000)
@@ -599,32 +590,30 @@ function KitchenDisplay({
   }, [])
 
   function getStatus(id: string): OrderStatus {
-    return statuses[id] ?? 'active'
+    if (overrides[id]) return overrides[id]
+    return (orders.find(o => o.sessionId === id)?.status ?? 'active') as OrderStatus
   }
 
   async function markReady(id: string) {
-    setStatuses(prev => {
-      const next = { ...prev, [id]: 'ready' as OrderStatus }
-      saveStoredStatuses(next)
-      return next
-    })
+    setOverrides(prev => ({ ...prev, [id]: 'ready' }))
     try {
       await fetch(`/api/orders/${id}/ready`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: PIN }),
       })
-    } catch {
-      // non-critical
-    }
+    } catch { /* non-critical — next poll will reflect Redis truth */ }
   }
 
-  function markActive(id: string) {
-    setStatuses(prev => {
-      const next = { ...prev, [id]: 'active' as OrderStatus }
-      saveStoredStatuses(next)
-      return next
-    })
+  async function markActive(id: string) {
+    setOverrides(prev => ({ ...prev, [id]: 'active' }))
+    try {
+      await fetch(`/api/orders/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: PIN, status: 'active' }),
+      })
+    } catch { /* non-critical */ }
   }
 
   const active = orders.filter(o => getStatus(o.sessionId) !== 'ready')

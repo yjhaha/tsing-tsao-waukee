@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { getOrder } from '@/lib/orderStore'
+import { getOrder, updateOrderStatus } from '@/lib/orderStore'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -68,6 +68,8 @@ export async function POST(
 </html>`
 
   const text = `Your order is ready${name}!\n\nOrder #${shortId} is ready for pickup at the counter.\n\n${order.items.map(i => `${i.quantity}x ${i.name}`).join('\n')}\n\nTotal: $${(order.amountTotal / 100).toFixed(2)}\n\nTsing Tsao Waukee — 160 SE Laurel St, Waukee, IA 50263`
+
+  await updateOrderStatus(sessionId, 'ready')
 
   const { error } = await resend.emails.send({
     from: 'Tsing Tsao Waukee <orders@tsingtsao.com>',
