@@ -142,15 +142,12 @@ export async function POST(req: NextRequest) {
       success_url: `${baseUrl}/order/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/order/cancel`,
       phone_number_collection: { enabled: true },
-      // Collect shipping address for delivery orders (for display purposes;
-      // the real address is already in metadata from our validated quote)
+      // Delivery: collect shipping address (real address already in metadata from validated quote)
+      // Pickup: collect billing address — Stripe Tax requires a real address to determine the
+      //         tax rate; without it, it falls back to IP estimation and often applies no tax.
       ...(isDelivery
-        ? {
-            shipping_address_collection: {
-              allowed_countries: ['US'],
-            },
-          }
-        : {}),
+        ? { shipping_address_collection: { allowed_countries: ['US'] } }
+        : { billing_address_collection: 'required' }),
     })
 
     return NextResponse.json({ url: session.url })
