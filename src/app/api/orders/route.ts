@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getOrders } from '@/lib/orderStore'
+import { getOrders, overlayStatuses } from '@/lib/orderStore'
 
 // Never cache this route — it must always return live data
 export const dynamic = 'force-dynamic'
@@ -75,6 +75,10 @@ export async function GET(req: NextRequest) {
     // Merge: store orders first (they have richer data), then any Stripe-only extras
     const allOrders = [...storeOrders, ...stripeOnlyOrders]
     allOrders.sort((a, b) => b.createdAt - a.createdAt)
+
+    // Overlay the dedicated status keys on top — this is the authoritative source
+    // and works for both Redis orders and Stripe-only fallback orders.
+    await overlayStatuses(allOrders)
 
     return NextResponse.json({ orders: allOrders })
   } catch (err) {

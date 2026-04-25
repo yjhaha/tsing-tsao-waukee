@@ -20,8 +20,12 @@ export async function POST(
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
 
+  // Persist ready status before anything else — decoupled from email delivery
+  await updateOrderStatus(sessionId, 'ready')
+
   if (!order.customerEmail) {
-    return NextResponse.json({ error: 'No customer email on record' }, { status: 422 })
+    // Status is saved; nothing more to do without an email address
+    return NextResponse.json({ ok: true })
   }
 
   const name = order.customerName ? `, ${order.customerName.split(' ')[0]}` : ''
@@ -68,8 +72,6 @@ export async function POST(
 </html>`
 
   const text = `Your order is ready${name}!\n\nOrder #${shortId} is ready for pickup at the counter.\n\n${order.items.map(i => `${i.quantity}x ${i.name}`).join('\n')}\n\nTotal: $${(order.amountTotal / 100).toFixed(2)}\n\nTsing Tsao Waukee — 160 SE Laurel St, Waukee, IA 50263`
-
-  await updateOrderStatus(sessionId, 'ready')
 
   const { error } = await resend.emails.send({
     from: 'Tsing Tsao Waukee <orders@tsingtsao.com>',
