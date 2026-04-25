@@ -32,17 +32,20 @@ const TTL = 60 * 60 * 24 * 30 // 30 days
 const ORDERS_SET = 'orders:by_time'
 
 const orderKey    = (sessionId: string)  => `order:${sessionId}`
+const statusKey   = (sessionId: string)  => `order_status:${sessionId}`
 const deliveryKey = (externalId: string) => `delivery:${externalId}`
 
 export async function saveOrder(order: Omit<KitchenOrder, 'status'> & { status?: KitchenOrder['status'] }): Promise<void> {
   (order as KitchenOrder).status ??= 'new'
+  const o = order as KitchenOrder
 
   await Promise.all([
-    redis.set(orderKey(order.sessionId), order, { ex: TTL }),
-    order.externalDeliveryId
-      ? redis.set(deliveryKey(order.externalDeliveryId), order.sessionId, { ex: TTL })
+    redis.set(orderKey(o.sessionId), o, { ex: TTL }),
+    redis.set(statusKey(o.sessionId), o.status, { ex: TTL }),
+    o.externalDeliveryId
+      ? redis.set(deliveryKey(o.externalDeliveryId), o.sessionId, { ex: TTL })
       : Promise.resolve(),
-    redis.zadd(ORDERS_SET, { score: order.createdAt, member: order.sessionId }),
+    redis.zadd(ORDERS_SET, { score: o.createdAt, member: o.sessionId }),
   ])
 }
 
@@ -100,7 +103,24 @@ export async function updateOrderStatus(
   sessionId: string,
   status: KitchenOrder['status'],
 ): Promise<void> {
+  // Write to the dedicated status key first — this works even for orders that
+  // arrived via the Stripe-only fallback and were never written to the order key.
+  await redis.set(statusKey(sessionId), status, { ex: TTL })
+
+  // Also update the embedded status on the order object if it exists in Redis,
+  // so the order key stays consistent for anything that reads it directly.
   const order = await getOrder(sessionId)
-  if (!order) return
-  await redis.set(orderKey(sessionId), { ...order, status }, { ex: TTL })
+  if (order) {
+    await redis.set(orderKey(sessionId), { ...order, status }, { ex: TTL })
+  }
+}
+
+/** Overlay status-key values onto a list of orders (mutates in place). */
+export async function overlayStatuses(orders: Array<{ sessionId: string; status?: string }>): Promise<void> {
+  if (!orders.length) return
+  const keys = orders.map(o => statusKey(o.sessionId))
+  const values = await redis.mget<(string | null)[]>(...keys)
+  orders.forEach((o, i) => {
+    if (values[i]) o.status = values[i] as KitchenOrder['status']
+  })
 }
