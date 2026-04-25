@@ -4,6 +4,7 @@ export interface OrderEmailItem {
   name: string
   quantity: number
   amount_total: number // in cents
+  comment?: string
 }
 
 export interface OrderEmailData {
@@ -14,6 +15,7 @@ export interface OrderEmailData {
   items: OrderEmailItem[]
   amountTotal: number // in cents (includes tax)
   taxTotal?: number   // in cents
+  scheduledFor?: string // ISO timestamp
   sessionId: string
   // Delivery extras
   deliveryAddress?: DeliveryAddress
@@ -62,7 +64,7 @@ function formatDeliveryAddress(a: DeliveryAddress): string {
 export function buildOrderEmailHtml(data: OrderEmailData): string {
   const {
     customerEmail, customerName, customerPhone,
-    orderType, items, amountTotal, taxTotal, sessionId,
+    orderType, items, amountTotal, taxTotal, scheduledFor, sessionId,
     deliveryAddress, deliveryTrackingUrl, dropoffEtaAt,
   } = data
 
@@ -72,11 +74,12 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
         <tr>
           <td style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; font-size: 15px; color: #f5dce2;">
             ${item.name}
+            ${item.comment ? `<br/><span style="font-size:12px;color:#8f4a58;font-style:italic;">✎ ${item.comment}</span>` : ''}
           </td>
-          <td style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; text-align: center; color: #c47888; font-size: 14px;">
+          <td style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; text-align: center; color: #c47888; font-size: 14px; vertical-align: top;">
             ×${item.quantity}
           </td>
-          <td style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; text-align: right; font-size: 15px; color: #f5dce2;">
+          <td style="padding: 10px 0; border-bottom: 1px solid #2a2a2a; text-align: right; font-size: 15px; color: #f5dce2; vertical-align: top;">
             ${formatCurrency(item.amount_total)}
           </td>
         </tr>`
@@ -223,6 +226,19 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
             </td>
           </tr>
 
+          ${scheduledFor ? `
+          <!-- Scheduled order banner -->
+          <tr>
+            <td style="padding: 12px 36px 0;">
+              <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px 16px;">
+                <p style="margin:0;font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Scheduled Order</p>
+                <p style="margin:4px 0 0;font-size:15px;color:#60a5fa;font-weight:700;">
+                  ${new Date(scheduledFor).toLocaleString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
+              </div>
+            </td>
+          </tr>` : ''}
+
           <!-- Customer info -->
           <tr>
             <td style="padding: 16px 36px;">
@@ -301,7 +317,7 @@ export function buildOrderEmailHtml(data: OrderEmailData): string {
 
 export function buildOrderEmailText(data: OrderEmailData): string {
   const {
-    customerEmail, customerPhone, orderType, items, amountTotal, taxTotal, sessionId,
+    customerEmail, customerPhone, orderType, items, amountTotal, taxTotal, scheduledFor, sessionId,
     deliveryAddress, deliveryTrackingUrl,
   } = data
 
@@ -318,6 +334,9 @@ export function buildOrderEmailText(data: OrderEmailData): string {
     `ORDER CONFIRMED – ${restaurantName.toUpperCase()}`,
     '=====================================',
     `Order type: ${formatOrderType(orderType)}`,
+    scheduledFor
+      ? `SCHEDULED FOR: ${new Date(scheduledFor).toLocaleString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`
+      : undefined,
     `Email: ${customerEmail}`,
     customerPhone ? `Phone: ${customerPhone}` : undefined,
     isDelivery && deliveryAddress
@@ -326,7 +345,10 @@ export function buildOrderEmailText(data: OrderEmailData): string {
     '',
     'ITEMS',
     '-----',
-    ...items.map(i => `${i.name} x${i.quantity}  ${formatCurrency(i.amount_total)}`),
+    ...items.flatMap(i => [
+      `${i.name} x${i.quantity}  ${formatCurrency(i.amount_total)}`,
+      ...(i.comment ? [`  ✎ ${i.comment}`] : []),
+    ]),
     '',
     ...(taxTotal ? [`Tax: ${formatCurrency(taxTotal)}`] : []),
     `TOTAL: ${formatCurrency(amountTotal)}`,

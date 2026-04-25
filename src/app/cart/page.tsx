@@ -177,7 +177,7 @@ function AddressForm({ address, onChange, onValidate, validating, error, quoted,
 
 export default function CartPage() {
   const {
-    items, total, count, updateQuantity, removeItem,
+    items, total, count, updateQuantity, removeItem, updateComment,
     orderMode, setOrderMode,
     deliveryAddress, setDeliveryAddress,
     deliveryQuote, setDeliveryQuote,
@@ -190,6 +190,27 @@ export default function CartPage() {
   const [addressError, setAddressError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
   const [customTip, setCustomTip] = useState('')
+  const [scheduledFor, setScheduledFor] = useState<string | null>(null)
+  const [nextOpening, setNextOpening] = useState<{ iso: string; label: string } | null>(null)
+
+  // Check business hours on mount and when tab regains focus
+  useEffect(() => {
+    function check() {
+      // Dynamic import to avoid SSR issues with Intl.DateTimeFormat timezone
+      import('@/lib/businessHours').then(({ isOpen, getNextOpening, formatNextOpening }) => {
+        if (!isOpen()) {
+          const next = getNextOpening()
+          setNextOpening({ iso: next.toISOString(), label: formatNextOpening(next) })
+        } else {
+          setNextOpening(null)
+          setScheduledFor(null)
+        }
+      })
+    }
+    check()
+    window.addEventListener('focus', check)
+    return () => window.removeEventListener('focus', check)
+  }, [])
 
   const streetInputRef = useRef<HTMLInputElement | null>(null)
   const autocompleteRef = useRef<any>(null)
@@ -308,7 +329,7 @@ export default function CartPage() {
 
   // ── Checkout ─────────────────────────────────────────────────────────────
 
-  async function handleCheckout() {
+  async function handleCheckout(forScheduledFor?: string) {
     setLoading(true)
     setCheckoutError(null)
     try {
@@ -325,10 +346,22 @@ export default function CartPage() {
                 tipCents: tipCents > 0 ? tipCents : undefined,
               }
             : {}),
+          ...(forScheduledFor ? { scheduledFor: forScheduledFor } : {}),
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Checkout failed')
+      if (!res.ok) {
+        if (data.error === 'outside_hours') {
+          // Hours closed between client check and API call — refresh the banner
+          import('@/lib/businessHours').then(({ getNextOpening, formatNextOpening }) => {
+            const next = getNextOpening()
+            setNextOpening({ iso: next.toISOString(), label: formatNextOpening(next) })
+          })
+          setLoading(false)
+          return
+        }
+        throw new Error(data.error ?? 'Checkout failed')
+      }
       window.location.href = data.url
     } catch (err) {
       setCheckoutError(err instanceof Error ? err.message : 'Something went wrong')
@@ -386,42 +419,55 @@ export default function CartPage() {
             {/* Items */}
             <div className="space-y-2 mb-6">
               {items.map(item => (
-                <div key={item.id} className="flex items-center gap-3 bg-slate-800 rounded-xl p-3">
-                  {item.image && (
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-700">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" sizes="56px" />
+                <div key={item.id} className="bg-slate-800 rounded-xl p-3">
+                  <div className="flex items-center gap-3">
+                    {item.image && (
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-700">
+                        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="56px" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-brand-gold font-semibold text-sm leading-snug">{item.name}</p>
+                      <p className="text-slate-400 text-xs mt-0.5">{fmt(item.price)} each</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-brand-gold font-semibold text-sm leading-snug">{item.name}</p>
-                    <p className="text-slate-400 text-xs mt-0.5">{fmt(item.price)} each</p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-500 text-slate-300 hover:border-white hover:text-white transition-colors text-base"
+                      >
+                        –
+                      </button>
+                      <span className="w-5 text-center text-white text-sm font-medium tabular-nums">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-500 text-slate-300 hover:border-white hover:text-white transition-colors text-base"
+                      >
+                        +
+                      </button>
+                      <span className="w-14 text-right text-white font-semibold text-sm tabular-nums">
+                        {fmt(item.price * item.quantity)}
+                      </span>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="ml-1 text-slate-600 hover:text-red-400 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <FaTimes className="text-xs" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => updateQuantity(item.id, -1)}
-                      className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-500 text-slate-300 hover:border-white hover:text-white transition-colors text-base"
-                    >
-                      –
-                    </button>
-                    <span className="w-5 text-center text-white text-sm font-medium tabular-nums">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      className="w-7 h-7 flex items-center justify-center rounded-full border border-slate-500 text-slate-300 hover:border-white hover:text-white transition-colors text-base"
-                    >
-                      +
-                    </button>
-                    <span className="w-14 text-right text-white font-semibold text-sm tabular-nums">
-                      {fmt(item.price * item.quantity)}
-                    </span>
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="ml-1 text-slate-600 hover:text-red-400 transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <FaTimes className="text-xs" />
-                    </button>
+                  {/* Per-item comment */}
+                  <div className="mt-2 ml-0">
+                    <input
+                      type="text"
+                      placeholder="Special request (e.g. no peanuts)…"
+                      value={item.comment ?? ''}
+                      onChange={e => updateComment(item.id, e.target.value)}
+                      maxLength={120}
+                      className="w-full bg-slate-700/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-slate-300 text-xs placeholder:text-slate-500 focus:outline-none focus:border-brand-gold/50 transition-colors"
+                    />
                   </div>
                 </div>
               ))}
@@ -547,11 +593,39 @@ export default function CartPage() {
               </div>
             )}
 
+            {/* Business hours banner */}
+            {nextOpening && !scheduledFor && (
+              <div className="mb-4 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-sm">
+                <p className="text-white font-semibold mb-0.5">We&apos;re currently closed</p>
+                <p className="text-slate-400 text-xs mb-3">Next opening: {nextOpening.label}</p>
+                <button
+                  onClick={() => setScheduledFor(nextOpening.iso)}
+                  className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors"
+                >
+                  Schedule for {nextOpening.label}
+                </button>
+              </div>
+            )}
+
+            {scheduledFor && (
+              <div className="mb-4 px-4 py-3 bg-blue-900/30 border border-blue-700/40 rounded-xl text-sm flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-blue-300 font-semibold text-xs uppercase tracking-wide mb-0.5">Scheduled order</p>
+                  <p className="text-white text-sm">
+                    {new Date(scheduledFor).toLocaleString('en-US', { timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </p>
+                </div>
+                <button onClick={() => setScheduledFor(null)} className="text-slate-500 hover:text-slate-300 text-xs mt-0.5">
+                  Cancel
+                </button>
+              </div>
+            )}
+
             {/* Checkout button */}
             <div className="space-y-2">
               <button
-                onClick={handleCheckout}
-                disabled={loading || !canCheckout}
+                onClick={() => handleCheckout(scheduledFor ?? undefined)}
+                disabled={loading || !canCheckout || (!!nextOpening && !scheduledFor)}
                 className="w-full py-4 bg-brand-gold text-slate-900 rounded-xl font-bold text-base
                            hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150
                            disabled:opacity-60 disabled:cursor-not-allowed"

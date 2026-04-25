@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { DeliveryAddress, DeliveryQuote } from '@/lib/delivery/types'
+import { isOpen } from '@/lib/businessHours'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -12,6 +13,7 @@ export interface CheckoutItem {
   price: number
   quantity: number
   image?: string
+  comment?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -23,16 +25,23 @@ export async function POST(req: NextRequest) {
       deliveryAddress,
       deliveryQuote,
       tipCents,
+      scheduledFor,
     }: {
       items: CheckoutItem[]
       orderMode?: 'pickup' | 'delivery'
       deliveryAddress?: DeliveryAddress
       deliveryQuote?: DeliveryQuote
       tipCents?: number
+      scheduledFor?: string // ISO timestamp — provided when placing a scheduled order
     } = body
 
     if (!items?.length) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
+    }
+
+    // Enforce business hours server-side; allow through if customer explicitly scheduled
+    if (!scheduledFor && !isOpen()) {
+      return NextResponse.json({ error: 'outside_hours' }, { status: 422 })
     }
 
     const isDelivery = orderMode === 'delivery'
@@ -90,8 +99,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Metadata for the webhook ─────────────────────────────────────────────
-    // We store delivery details in metadata so the webhook can dispatch DoorDash
-    // after payment. Stripe metadata values must be strings.
     const metadata: Record<string, string> = {
       order_type: isDelivery ? 'delivery' : 'pickup',
     }
@@ -112,6 +119,17 @@ export async function POST(req: NextRequest) {
 
     if (isDelivery && tipCents && tipCents > 0) {
       metadata['tip_cents'] = String(tipCents)
+    }
+
+    if (scheduledFor) {
+      metadata['scheduled_for'] = scheduledFor
+    }
+
+    // Store per-item comments as {"0":"no peanuts","2":"extra spicy"} — index matches food items array
+    const comments: Record<string, string> = {}
+    items.forEach((item, idx) => { if (item.comment) comments[idx] = item.comment })
+    if (Object.keys(comments).length > 0) {
+      metadata['item_comments'] = JSON.stringify(comments)
     }
 
     // ── Create Stripe session ────────────────────────────────────────────────

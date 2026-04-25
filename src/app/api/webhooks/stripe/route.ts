@@ -87,12 +87,18 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     limit: 100,
   })
 
+  let itemComments: Record<string, string> = {}
+  try {
+    if (meta.item_comments) itemComments = JSON.parse(meta.item_comments)
+  } catch { /* ignore malformed */ }
+
   const items: OrderEmailItem[] = lineItemsResponse.data
     .filter(li => li.description !== 'Delivery Fee' && li.description !== 'Driver Tip')
-    .map(li => ({
+    .map((li, idx) => ({
       name: li.description ?? 'Item',
       quantity: li.quantity ?? 1,
       amount_total: li.amount_total,
+      comment: itemComments[String(idx)] || undefined,
     }))
 
   // ── Dispatch delivery ─────────────────────────────────────────────────────
@@ -123,6 +129,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   }
 
   const taxTotal = session.total_details?.amount_tax ?? 0
+  const scheduledFor = meta.scheduled_for || undefined
 
   // ── Save to order store ────────────────────────────────────────────────────
   await saveOrder({
@@ -135,6 +142,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     items,
     amountTotal: session.amount_total ?? 0,
     taxTotal: taxTotal > 0 ? taxTotal : undefined,
+    scheduledFor,
     deliveryAddress,
     externalDeliveryId,
     deliveryTrackingUrl,
@@ -154,6 +162,7 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     items,
     amountTotal: session.amount_total ?? 0,
     taxTotal: taxTotal > 0 ? taxTotal : undefined,
+    scheduledFor,
     sessionId: session.id,
     deliveryAddress,
     deliveryTrackingUrl,

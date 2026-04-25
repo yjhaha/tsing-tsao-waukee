@@ -8,9 +8,11 @@ export interface KitchenOrder {
   customerName: string | undefined
   customerPhone: string | undefined
   orderType: string
-  items: { name: string; quantity: number; amount_total: number }[]
+  status: 'new' | 'active' | 'ready'
+  items: { name: string; quantity: number; amount_total: number; comment?: string }[]
   amountTotal: number
   taxTotal?: number
+  scheduledFor?: string  // ISO timestamp — set when order placed outside business hours
   deliveryAddress?: DeliveryAddress
   externalDeliveryId?: string
   deliveryTrackingUrl?: string
@@ -32,7 +34,9 @@ const ORDERS_SET = 'orders:by_time'
 const orderKey    = (sessionId: string)  => `order:${sessionId}`
 const deliveryKey = (externalId: string) => `delivery:${externalId}`
 
-export async function saveOrder(order: KitchenOrder): Promise<void> {
+export async function saveOrder(order: Omit<KitchenOrder, 'status'> & { status?: KitchenOrder['status'] }): Promise<void> {
+  (order as KitchenOrder).status ??= 'new'
+
   await Promise.all([
     redis.set(orderKey(order.sessionId), order, { ex: TTL }),
     order.externalDeliveryId
@@ -90,4 +94,13 @@ export async function updateOrderCourierLocation(
     ...(courierName ? { courierName } : {}),
     ...(dropoffEtaAt ? { dropoffEtaAt } : {}),
   }, { ex: TTL })
+}
+
+export async function updateOrderStatus(
+  sessionId: string,
+  status: KitchenOrder['status'],
+): Promise<void> {
+  const order = await getOrder(sessionId)
+  if (!order) return
+  await redis.set(orderKey(sessionId), { ...order, status }, { ex: TTL })
 }
