@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DeliveryAddress } from '@/lib/delivery/types'
 import {
+  FaBell,
   FaClock,
   FaMotorcycle,
   FaShoppingBag,
@@ -146,12 +147,13 @@ function deliveryStatusConfig(theme: Theme): Record<string, { label: string; ico
 // AudioContext must be created (and resumed) inside a user gesture on mobile
 // browsers. We create it once on the PIN submit or first tap, then reuse it.
 let _audioCtx: AudioContext | null = null
+let _audioResumeListenerAdded = false
 
 function unlockAudio() {
   try {
     if (!_audioCtx) {
       _audioCtx = new AudioContext()
-      // iOS Safari requires playing a silent buffer to fully unlock the context
+      // iOS Safari / Android Chrome require a silent buffer to fully unlock
       const buf = _audioCtx.createBuffer(1, 1, 22050)
       const src = _audioCtx.createBufferSource()
       src.buffer = buf
@@ -159,36 +161,79 @@ function unlockAudio() {
       src.start(0)
     }
     if (_audioCtx.state === 'suspended') _audioCtx.resume()
+    // Android Chrome suspends AudioContext when screen goes off or page is hidden.
+    // Resume it automatically whenever the page becomes visible again.
+    if (!_audioResumeListenerAdded) {
+      _audioResumeListenerAdded = true
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && _audioCtx?.state === 'suspended') {
+          _audioCtx.resume().catch(() => {})
+        }
+      })
+    }
   } catch { /* unavailable */ }
 }
 
+// 4 waves of 4-note ascending chime, ~4.5 s total — loud enough to be heard from the back
 function playChime() {
   const ctx = _audioCtx
   if (!ctx) return
   const doPlay = () => {
     try {
-      const notes = [880, 1100, 1320, 1760]
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.type = 'sine'
-        osc.frequency.value = freq
-        const t = ctx.currentTime + i * 0.12
-        gain.gain.setValueAtTime(0, t)
-        gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
-        osc.start(t)
-        osc.stop(t + 0.4)
-      })
+      const noteFreqs = [880, 1100, 1320, 1760]
+      const noteGap = 0.15      // seconds between notes within a wave
+      const noteDuration = 0.5  // sustain of each note
+      const waveGap = 1.1       // seconds between waves (note: not silence — waves overlap slightly)
+      const waves = 4           // 4 × 1.1 s + last wave ≈ 4.6 s total
+
+      for (let w = 0; w < waves; w++) {
+        noteFreqs.forEach((freq, i) => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.type = 'sine'
+          osc.frequency.value = freq
+          const t = ctx.currentTime + w * waveGap + i * noteGap
+          gain.gain.setValueAtTime(0, t)
+          gain.gain.linearRampToValueAtTime(0.9, t + 0.03)
+          gain.gain.exponentialRampToValueAtTime(0.001, t + noteDuration)
+          osc.start(t)
+          osc.stop(t + noteDuration)
+        })
+      }
     } catch { /* silently ignore */ }
   }
   if (ctx.state === 'suspended') {
-    ctx.resume().then(doPlay)
+    ctx.resume().then(doPlay).catch(() => {})
   } else {
     doPlay()
   }
+}
+
+// ── Browser Notifications ─────────────────────────────────────────────────────
+// Shows a system notification (appears on lock screen on Android Chrome).
+// Permission must be requested inside a user gesture.
+function requestNotificationPermission() {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {})
+  }
+}
+
+function showOrderNotification(count: number) {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'granted') return
+  try {
+    new Notification(count === 1 ? '🔔 New Order!' : `🔔 ${count} New Orders!`, {
+      body: count === 1
+        ? 'A new order is waiting in the kitchen.'
+        : `${count} new orders are waiting in the kitchen.`,
+      icon: '/favicon.ico',
+      tag: 'new-order',          // replaces previous notification instead of stacking
+      requireInteraction: true,  // stays visible until staff taps it
+    })
+  } catch { /* unavailable */ }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -280,6 +325,7 @@ function PinGate({
       const pin = [...next.slice(0, 3), val.slice(-1)].join('')
       if (pin === PIN) {
         unlockAudio() // must run inside this user-gesture handler
+        requestNotificationPermission()
         sessionStorage.setItem('kitchen_auth', '1')
         onUnlock()
       } else {
@@ -538,9 +584,12 @@ function KitchenDisplay({
   const [overrides, setOverrides] = useState<Record<string, OrderStatus>>({})
   const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  // Tracks orders that arrived while the staff was away from the screen
+  const [missedCount, setMissedCount] = useState(0)
   const knownIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
   const countdownRef = useRef(POLL_INTERVAL / 1000)
+  const pageVisibleRef = useRef(true)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -552,14 +601,22 @@ function KitchenDisplay({
       fetched.forEach(o => {
         if (!knownIds.current.has(o.sessionId)) {
           knownIds.current.add(o.sessionId)
-          // Only chime for genuinely new orders (not already-ready ones loaded on first poll)
+          // Only alert for genuinely new orders (not already-ready ones loaded on first poll)
           if (!firstLoad.current && o.status !== 'ready') {
             newOnes.push(o.sessionId)
           }
         }
       })
 
-      if (newOnes.length > 0) playChime()
+      if (newOnes.length > 0) {
+        playChime()
+        showOrderNotification(newOnes.length)
+        // If staff isn't looking at the screen, count the missed orders so we
+        // can show the banner when they return
+        if (!pageVisibleRef.current) {
+          setMissedCount(prev => prev + newOnes.length)
+        }
+      }
 
       setOrders(fetched)
       // Clear optimistic overrides — Redis is now the source of truth
@@ -587,6 +644,14 @@ function KitchenDisplay({
       setCountdown(countdownRef.current)
     }, 1000)
     return () => clearInterval(tick)
+  }, [])
+
+  // Track whether the kitchen screen is visible so we know when orders were "missed"
+  useEffect(() => {
+    pageVisibleRef.current = !document.hidden
+    const handler = () => { pageVisibleRef.current = !document.hidden }
+    document.addEventListener('visibilitychange', handler)
+    return () => document.removeEventListener('visibilitychange', handler)
   }, [])
 
   function getStatus(id: string): OrderStatus {
@@ -623,6 +688,26 @@ function KitchenDisplay({
 
   return (
     <div className={`min-h-screen ${t.page}`}>
+      {/* Missed-orders banner — shown when orders arrived while staff was away */}
+      {missedCount > 0 && (
+        <div className="sticky top-0 z-20 bg-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-2 font-bold">
+            <FaBell className="text-lg flex-shrink-0" />
+            <span>
+              {missedCount === 1
+                ? '1 new order arrived while you were away'
+                : `${missedCount} new orders arrived while you were away`}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMissedCount(0)}
+            className="text-white/80 hover:text-white text-sm underline flex-shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Top bar */}
       <div className={`sticky top-0 z-10 backdrop-blur border-b px-4 py-3 flex items-center justify-between gap-3 ${t.topBar}`}>
         <div className="flex items-center gap-3 flex-wrap">
@@ -714,7 +799,10 @@ export default function KitchenPage() {
   // to unlock the AudioContext. Register a one-time pointer listener so the
   // first tap on the kitchen screen unlocks audio instead.
   useEffect(() => {
-    const handler = () => { unlockAudio() }
+    const handler = () => {
+      unlockAudio()
+      requestNotificationPermission()
+    }
     window.addEventListener('pointerdown', handler, { once: true })
     return () => window.removeEventListener('pointerdown', handler)
   }, [])
