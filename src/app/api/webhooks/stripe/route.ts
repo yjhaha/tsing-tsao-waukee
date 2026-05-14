@@ -44,9 +44,11 @@ export async function POST(req: NextRequest) {
     try {
       await handleOrderConfirmation(session)
     } catch (err) {
-      console.error('[webhook] Failed to handle order confirmation:', err)
-      // Return 200 so Stripe doesn't retry — the order was placed,
-      // operational failures (email, delivery) are non-critical to payment receipt
+      // Return 500 so Stripe retries with backoff (up to 3 days). If we
+      // return 200 here, an order that failed to land in Redis or that
+      // never sent a confirmation email is permanently lost.
+      console.error('[webhook] Order confirmation failed; returning 500 to trigger Stripe retry:', err)
+      return NextResponse.json({ error: 'retry' }, { status: 500 })
     }
   }
 
@@ -131,26 +133,10 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
   const taxTotal = session.total_details?.amount_tax ?? 0
   const scheduledFor = meta.scheduled_for || undefined
 
-  // ── Save to order store ────────────────────────────────────────────────────
-  await saveOrder({
-    sessionId: session.id,
-    createdAt: session.created,
-    customerEmail,
-    customerName,
-    customerPhone,
-    orderType,
-    items,
-    amountTotal: session.amount_total ?? 0,
-    taxTotal: taxTotal > 0 ? taxTotal : undefined,
-    scheduledFor,
-    deliveryAddress,
-    externalDeliveryId,
-    deliveryTrackingUrl,
-    deliveryStatus: isDelivery ? 'created' : undefined,
-    dropoffEtaAt,
-  })
-
-  // ── Send confirmation email ────────────────────────────────────────────────
+  // Run order persistence and confirmation email independently — a failure in
+  // one must not silently block the other. If either fails, we throw at the
+  // end to trigger a Stripe retry (which may cause a duplicate email on a
+  // later retry, but that is far preferable to a missing order or no email).
   const RESTAURANT_EMAIL = process.env.RESTAURANT_EMAIL ?? 'tsingtsaowaukee@gmail.com'
   const RESTAURANT_NAME = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
 
@@ -169,17 +155,51 @@ async function handleOrderConfirmation(session: Stripe.Checkout.Session) {
     dropoffEtaAt,
   }
 
-  const { error } = await resend.emails.send({
-    from: `${RESTAURANT_NAME} <orders@tsingtsao.com>`,
-    to: customerEmail,
-    bcc: RESTAURANT_EMAIL,
-    subject: `Your ${RESTAURANT_NAME} order is confirmed! 🥡`,
-    html: buildOrderEmailHtml(emailData),
-    text: buildOrderEmailText(emailData),
-  })
+  const [saveResult, emailResult] = await Promise.allSettled([
+    saveOrder({
+      sessionId: session.id,
+      createdAt: session.created,
+      customerEmail,
+      customerName,
+      customerPhone,
+      orderType,
+      items,
+      amountTotal: session.amount_total ?? 0,
+      taxTotal: taxTotal > 0 ? taxTotal : undefined,
+      scheduledFor,
+      deliveryAddress,
+      externalDeliveryId,
+      deliveryTrackingUrl,
+      deliveryStatus: isDelivery ? 'created' : undefined,
+      dropoffEtaAt,
+    }),
+    resend.emails.send({
+      from: `${RESTAURANT_NAME} <orders@tsingtsao.com>`,
+      to: customerEmail,
+      bcc: RESTAURANT_EMAIL,
+      subject: `Your ${RESTAURANT_NAME} order is confirmed! 🥡`,
+      html: buildOrderEmailHtml(emailData),
+      text: buildOrderEmailText(emailData),
+    }),
+  ])
 
-  if (error) {
-    throw new Error(`Resend error: ${JSON.stringify(error)}`)
+  const failures: string[] = []
+
+  if (saveResult.status === 'rejected') {
+    console.error(`[webhook] saveOrder failed for session ${session.id}:`, saveResult.reason)
+    failures.push('saveOrder')
+  }
+
+  if (emailResult.status === 'rejected') {
+    console.error(`[webhook] Resend threw for session ${session.id}:`, emailResult.reason)
+    failures.push('email')
+  } else if (emailResult.value.error) {
+    console.error(`[webhook] Resend returned error for session ${session.id}:`, emailResult.value.error)
+    failures.push('email')
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`Order confirmation partially failed: ${failures.join(', ')}`)
   }
 
   console.log(

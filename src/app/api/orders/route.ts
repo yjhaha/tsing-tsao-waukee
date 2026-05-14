@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getOrders, overlayStatuses } from '@/lib/orderStore'
+import { getOrders, overlayStatuses, type KitchenOrder } from '@/lib/orderStore'
 
 // Never cache this route — it must always return live data
 export const dynamic = 'force-dynamic'
@@ -17,21 +17,27 @@ export async function GET(req: NextRequest) {
 
   const since = Math.floor(Date.now() / 1000) - 86400 // last 24 h
 
+  // ── 1. Pull from Redis store (populated by webhook). If Redis is unhealthy,
+  //       continue with an empty store list — the Stripe fallback below is the
+  //       safety net that ensures the kitchen never goes blind on paid orders.
+  let storeOrders: KitchenOrder[] = []
   try {
-    // ── 1. Pull from in-memory store (populated by webhook) ─────────────────
-    // The store has full delivery metadata (address, tracking URL, status).
-    const storeOrders = await getOrders()
-    const storeIds = new Set(storeOrders.map(o => o.sessionId))
+    storeOrders = await getOrders()
+  } catch (err) {
+    console.error('[orders] Redis getOrders failed; falling back to Stripe-only view:', err)
+  }
+  const storeIds = new Set(storeOrders.map(o => o.sessionId))
 
-    // ── 2. Also fetch from Stripe for any paid orders that the webhook
-    //       hasn't processed yet (e.g. cold start race, missed webhook). ─────
+  // ── 2. Always fetch from Stripe so paid orders are visible even when the
+  //       webhook (or Redis) failed at the time of payment.
+  const stripeOnlyOrders: KitchenOrder[] = []
+  try {
     const sessions = await stripe.checkout.sessions.list({
       limit: 50,
       expand: ['data.line_items'],
       created: { gte: since },
     })
 
-    const stripeOnlyOrders = []
     for (const s of sessions.data) {
       if (s.payment_status !== 'paid') continue
       if (storeIds.has(s.id)) continue // already in store
@@ -39,7 +45,6 @@ export async function GET(req: NextRequest) {
       const meta = s.metadata ?? {}
       const orderType = meta.order_type ?? 'pickup'
 
-      // Reconstruct delivery address from metadata if present
       const deliveryAddress =
         orderType === 'delivery' && meta.delivery_street
           ? {
@@ -51,6 +56,20 @@ export async function GET(req: NextRequest) {
             }
           : undefined
 
+      let itemComments: Record<string, string> = {}
+      try {
+        if (meta.item_comments) itemComments = JSON.parse(meta.item_comments)
+      } catch { /* ignore malformed */ }
+
+      const items = (s.line_items?.data ?? [])
+        .filter(li => li.description !== 'Delivery Fee' && li.description !== 'Driver Tip')
+        .map((li, idx) => ({
+          name: li.description ?? 'Item',
+          quantity: li.quantity ?? 1,
+          amount_total: li.amount_total,
+          comment: itemComments[String(idx)] || undefined,
+        }))
+
       stripeOnlyOrders.push({
         sessionId: s.id,
         createdAt: s.created,
@@ -58,31 +77,33 @@ export async function GET(req: NextRequest) {
         customerName: s.customer_details?.name ?? undefined,
         customerPhone: s.customer_details?.phone ?? undefined,
         orderType,
-        items: (s.line_items?.data ?? [])
-          .filter(li => li.description !== 'Delivery Fee' && li.description !== 'Driver Tip')
-          .map(li => ({
-            name: li.description ?? 'Item',
-            quantity: li.quantity ?? 1,
-            amount_total: li.amount_total,
-          })),
+        status: 'new',
+        items,
         amountTotal: s.amount_total ?? 0,
+        taxTotal: s.total_details?.amount_tax && s.total_details.amount_tax > 0 ? s.total_details.amount_tax : undefined,
+        scheduledFor: meta.scheduled_for || undefined,
         deliveryAddress,
-        deliveryTrackingUrl: undefined,
         deliveryStatus: orderType === 'delivery' ? 'created' : undefined,
       })
     }
-
-    // Merge: store orders first (they have richer data), then any Stripe-only extras
-    const allOrders = [...storeOrders, ...stripeOnlyOrders]
-    allOrders.sort((a, b) => b.createdAt - a.createdAt)
-
-    // Overlay the dedicated status keys on top — this is the authoritative source
-    // and works for both Redis orders and Stripe-only fallback orders.
-    await overlayStatuses(allOrders)
-
-    return NextResponse.json({ orders: allOrders })
   } catch (err) {
-    console.error('[orders] Failed to fetch:', err)
-    return NextResponse.json({ orders: [] }, { status: 500 })
+    console.error('[orders] Stripe fallback fetch failed:', err)
+    // If both Redis and Stripe failed, return whatever we got from Redis (possibly empty).
+    if (storeOrders.length === 0) {
+      return NextResponse.json({ orders: [], error: 'upstream_unavailable' }, { status: 503 })
+    }
   }
+
+  // Merge: store orders first (they have richer data), then any Stripe-only extras
+  const allOrders = [...storeOrders, ...stripeOnlyOrders]
+  allOrders.sort((a, b) => b.createdAt - a.createdAt)
+
+  // Overlay the dedicated status keys on top — best-effort, won't fail the response
+  try {
+    await overlayStatuses(allOrders)
+  } catch (err) {
+    console.error('[orders] overlayStatuses failed; serving without status overlay:', err)
+  }
+
+  return NextResponse.json({ orders: allOrders })
 }
