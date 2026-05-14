@@ -52,7 +52,9 @@ export async function saveOrder(order: Omit<KitchenOrder, 'status'> & { status?:
 export async function getOrders(): Promise<KitchenOrder[]> {
   const ids = await redis.zrange(ORDERS_SET, 0, 49, { rev: true }) as string[]
   if (!ids.length) return []
-  const orders = await Promise.all(ids.map(id => redis.get<KitchenOrder>(orderKey(id))))
+  // One MGET instead of N individual GETs — was the dominant driver of
+  // Upstash request volume from kitchen polling (~50 reqs/poll → 1).
+  const orders = await redis.mget<(KitchenOrder | null)[]>(...ids.map(orderKey))
   return orders.filter(Boolean) as KitchenOrder[]
 }
 
