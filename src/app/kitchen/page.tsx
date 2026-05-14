@@ -695,26 +695,51 @@ function KitchenDisplay({
     return (orders.find(o => o.sessionId === id)?.status ?? 'active') as OrderStatus
   }
 
+  // Roll back the optimistic override for one order. Used when the API call
+  // didn't persist — without this, the card would briefly look like it updated
+  // and then flip back on the next poll, looking like nothing happened.
+  function clearOverride(id: string) {
+    setOverrides(prev => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
   async function markReady(id: string) {
     setOverrides(prev => ({ ...prev, [id]: 'ready' }))
     try {
-      await fetch(`/api/orders/${id}/ready`, {
+      const res = await fetch(`/api/orders/${id}/ready`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: PIN }),
       })
-    } catch { /* non-critical — next poll will reflect Redis truth */ }
+      if (!res.ok) {
+        console.error(`[kitchen] markReady ${id} failed: ${res.status}`)
+        clearOverride(id)
+      }
+    } catch (err) {
+      console.error(`[kitchen] markReady ${id} network error:`, err)
+      clearOverride(id)
+    }
   }
 
   async function markActive(id: string) {
     setOverrides(prev => ({ ...prev, [id]: 'active' }))
     try {
-      await fetch(`/api/orders/${id}/status`, {
+      const res = await fetch(`/api/orders/${id}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: PIN, status: 'active' }),
       })
-    } catch { /* non-critical */ }
+      if (!res.ok) {
+        console.error(`[kitchen] markActive ${id} failed: ${res.status}`)
+        clearOverride(id)
+      }
+    } catch (err) {
+      console.error(`[kitchen] markActive ${id} network error:`, err)
+      clearOverride(id)
+    }
   }
 
   const active = orders.filter(o => getStatus(o.sessionId) !== 'ready')

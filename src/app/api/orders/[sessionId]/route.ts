@@ -4,20 +4,38 @@
  * Returns order details for the success page, including delivery tracking info
  * and live courier position (updated by webhooks).
  *
- * Returns 404 while the webhook hasn't fired yet — client should poll with back-off.
+ * Falls back to fetching directly from Stripe when the webhook hasn't yet
+ * persisted the order — keeps the customer success page from 404-ing in the
+ * gap between payment and webhook (or when the webhook failed entirely, e.g.
+ * during a Redis quota outage).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
 import { getOrder } from '@/lib/orderStore'
+import { buildOrderFromStripeSession } from '@/lib/orderStripeFallback'
 
 export const runtime = 'nodejs'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2026-03-25.dahlia',
+})
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await params
-  const order = await getOrder(sessionId)
+
+  let order = await getOrder(sessionId).catch(err => {
+    console.error(`[order/${sessionId}] Redis lookup failed:`, err)
+    return undefined
+  })
+
+  if (!order) {
+    const fallback = await buildOrderFromStripeSession(stripe, sessionId)
+    if (fallback) order = fallback
+  }
 
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import Stripe from 'stripe'
 import { getOrder, updateOrderStatus } from '@/lib/orderStore'
+import { buildOrderFromStripeSession } from '@/lib/orderStripeFallback'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2026-03-25.dahlia',
+})
+
+// "Your order is ready" is meaningless for stale orders the owner is clearing
+// from the kitchen view after the fact. Cap at 2h so legitimately delayed
+// orders still notify, but 13h-old leftovers don't spam the customer.
+const READY_EMAIL_MAX_AGE_SEC = 2 * 60 * 60
 
 export async function POST(
   req: NextRequest,
@@ -14,18 +24,41 @@ export async function POST(
   }
 
   const { sessionId } = await params
-  const order = await getOrder(sessionId)
 
-  if (!order) {
-    return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+  // Persist ready status FIRST — this writes to the dedicated status key,
+  // which works even for orders that arrived via the Stripe fallback and
+  // were never saved to Redis (e.g. webhook missed during Upstash quota
+  // exhaustion). Without this, "Mark Ready" silently no-ops.
+  try {
+    await updateOrderStatus(sessionId, 'ready')
+  } catch (err) {
+    console.error(`[ready] updateOrderStatus failed for ${sessionId}:`, err)
+    return NextResponse.json({ error: 'Failed to persist status' }, { status: 500 })
   }
 
-  // Persist ready status before anything else — decoupled from email delivery
-  await updateOrderStatus(sessionId, 'ready')
+  // Try Redis first (richer data), fall back to Stripe for orders the webhook
+  // never managed to persist.
+  let order = await getOrder(sessionId).catch(() => undefined)
+  if (!order) {
+    const fallback = await buildOrderFromStripeSession(stripe, sessionId)
+    if (fallback) order = fallback
+  }
+
+  if (!order) {
+    // Status is at least persisted; just nothing to email.
+    return NextResponse.json({ ok: true, note: 'status_only' })
+  }
 
   if (!order.customerEmail) {
-    // Status is saved; nothing more to do without an email address
     return NextResponse.json({ ok: true })
+  }
+
+  // Skip the customer-facing email for stale orders — owner is just cleaning
+  // up the kitchen view (e.g. for orders already picked up in person).
+  const ageSec = Math.floor(Date.now() / 1000) - order.createdAt
+  if (ageSec > READY_EMAIL_MAX_AGE_SEC) {
+    console.log(`[ready] Skipping ready email for stale order ${sessionId} (age ${ageSec}s)`)
+    return NextResponse.json({ ok: true, note: 'skipped_stale_email' })
   }
 
   const name = order.customerName ? `, ${order.customerName.split(' ')[0]}` : ''
