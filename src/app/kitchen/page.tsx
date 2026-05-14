@@ -256,7 +256,30 @@ function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`
 }
 
-const POLL_INTERVAL = 10_000
+// Slow-poll windows in America/Chicago time (start hour inclusive, end exclusive).
+// Used to reduce Upstash Redis request volume during predictable lulls.
+// Each /api/orders poll costs ~3 Redis reads after the MGET fix, so 10s polling
+// runs ~26K reads/day per tablet during open hours. The 2–4pm CT window is the
+// dead zone between lunch and dinner where slower polling has no UX cost.
+const SLOW_POLL_WINDOWS_CT: Array<readonly [number, number]> = [
+  [14, 16], // 2pm–4pm CT
+]
+const FAST_POLL_MS = 10_000
+const SLOW_POLL_MS = 25_000
+
+function getPollIntervalMs(): number {
+  const ctHour = parseInt(
+    new Date().toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      hour12: false,
+    }),
+    10,
+  )
+  const inSlowWindow = SLOW_POLL_WINDOWS_CT.some(([start, end]) => ctHour >= start && ctHour < end)
+  return inSlowWindow ? SLOW_POLL_MS : FAST_POLL_MS
+}
+
 const PIN = process.env.NEXT_PUBLIC_KITCHEN_PIN ?? '0000'
 
 // ── Theme storage ────────────────────────────────────────────────────────────
@@ -582,13 +605,13 @@ function KitchenDisplay({
   const [orders, setOrders] = useState<Order[]>([])
   // Optimistic overrides — applied immediately on button tap, cleared on next poll
   const [overrides, setOverrides] = useState<Record<string, OrderStatus>>({})
-  const [countdown, setCountdown] = useState(POLL_INTERVAL / 1000)
+  const [countdown, setCountdown] = useState(() => getPollIntervalMs() / 1000)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   // Tracks orders that arrived while the staff was away from the screen
   const [missedCount, setMissedCount] = useState(0)
   const knownIds = useRef<Set<string>>(new Set())
   const firstLoad = useRef(true)
-  const countdownRef = useRef(POLL_INTERVAL / 1000)
+  const countdownRef = useRef(getPollIntervalMs() / 1000)
   const pageVisibleRef = useRef(true)
 
   const fetchOrders = useCallback(async () => {
@@ -622,19 +645,32 @@ function KitchenDisplay({
       // Clear optimistic overrides — Redis is now the source of truth
       setOverrides({})
       setLastUpdated(new Date())
-      countdownRef.current = POLL_INTERVAL / 1000
-      setCountdown(POLL_INTERVAL / 1000)
+      const nextIntervalSec = getPollIntervalMs() / 1000
+      countdownRef.current = nextIntervalSec
+      setCountdown(nextIntervalSec)
       firstLoad.current = false
     } catch {
       // network error — retry next cycle
     }
   }, [])
 
-  // Initial fetch + polling
+  // Initial fetch + polling. We use a recursive setTimeout (not setInterval)
+  // because the poll interval changes dynamically by time of day.
   useEffect(() => {
-    fetchOrders()
-    const poll = setInterval(fetchOrders, POLL_INTERVAL)
-    return () => clearInterval(poll)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let cancelled = false
+
+    const tick = async () => {
+      await fetchOrders()
+      if (cancelled) return
+      timer = setTimeout(tick, getPollIntervalMs())
+    }
+    tick()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [fetchOrders])
 
   // Countdown ticker
