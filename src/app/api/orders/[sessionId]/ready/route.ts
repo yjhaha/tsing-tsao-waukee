@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import Stripe from 'stripe'
 import { getOrder, updateOrderStatus } from '@/lib/orderStore'
 import { buildOrderFromStripeSession } from '@/lib/orderStripeFallback'
+import { getRestaurantPhoneDisplay } from '@/lib/restaurant'
 
 const resend = new Resend(process.env.RESEND_API_KEY!)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -63,6 +64,7 @@ export async function POST(
 
   const name = order.customerName ? `, ${order.customerName.split(' ')[0]}` : ''
   const shortId = order.sessionId.slice(-6).toUpperCase()
+  const restaurantPhone = getRestaurantPhoneDisplay()
   const itemLines = order.items
     .map(i => `${i.quantity}× ${i.name}`)
     .join('<br>')
@@ -96,7 +98,7 @@ export async function POST(
               <td style="padding:12px 0 0;color:#f59e0b;font-weight:700;font-size:15px;text-align:right;">$${(order.amountTotal / 100).toFixed(2)}</td>
             </tr>
           </table>
-          <p style="margin:28px 0 0;color:#8f4a58;font-size:12px;text-align:center;">160 SE Laurel St, Waukee, IA 50263 · (515) 490-2888</p>
+          <p style="margin:28px 0 0;color:#8f4a58;font-size:12px;text-align:center;">160 SE Laurel St, Waukee, IA 50263 · ${restaurantPhone}</p>
         </td></tr>
       </table>
     </td></tr>

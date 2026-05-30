@@ -4,6 +4,8 @@
 // power any Course Studio restaurant without code changes — just a different
 // .env.local per deployment.
 
+import { getRestaurantPhoneDisplay } from '../restaurant'
+
 export interface RestaurantDeliveryConfig {
   restaurantName: string
   address: {
@@ -40,7 +42,7 @@ export function getDeliveryConfig(): RestaurantDeliveryConfig {
       lat: parseFloat(process.env.RESTAURANT_LAT ?? '41.6132'),
       lng: parseFloat(process.env.RESTAURANT_LNG ?? '-93.8692'),
     },
-    phone: process.env.RESTAURANT_PHONE ?? '(515) 987-6017',
+    phone: getRestaurantPhoneDisplay(),
     deliveryRadiusMiles: parseFloat(process.env.DELIVERY_RADIUS_MILES ?? '8'),
     customerFeeCents: parseInt(process.env.DELIVERY_FEE_CUSTOMER_CENTS ?? '500', 10),
     restaurantFeeCents: parseInt(process.env.DELIVERY_FEE_RESTAURANT_CENTS ?? '200', 10),

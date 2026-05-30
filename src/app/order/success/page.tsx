@@ -6,6 +6,7 @@ import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import type { DeliveryAddress } from '@/lib/delivery/types'
 import { FaMotorcycle, FaShoppingBag, FaCheckCircle, FaExclamationTriangle, FaClock, FaMapMarkerAlt } from 'react-icons/fa'
+import { RESTAURANT_PHONE_DISPLAY } from '@/lib/restaurant'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ function StatusStepper({ status }: { status: string | null }) {
     return (
       <div className="flex items-center gap-2 px-4 py-3 bg-red-900/40 border border-red-600/50 rounded-xl text-red-200 text-sm">
         <FaExclamationTriangle className="shrink-0 text-red-400 text-base" />
-        <span>Delivery was cancelled — please call us at (515) 830-9600</span>
+        <span>Delivery was cancelled — please call us at {RESTAURANT_PHONE_DISPLAY}</span>
       </div>
     )
   }

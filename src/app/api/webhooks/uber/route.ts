@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { updateOrderDeliveryStatus, updateOrderCourierLocation, getOrderByDeliveryId } from '@/lib/orderStore'
+import { getRestaurantPhoneDisplay } from '@/lib/restaurant'
 
 export const runtime = 'nodejs'
 
@@ -70,7 +71,7 @@ const STATUS_EMAILS: Record<string, { subject: string; body: string } | null> = 
   },
   cancelled: {
     subject: '⚠️ Delivery update — please contact us',
-    body: 'There was an issue with your delivery. Please call us at (515) 830-9600 so we can make it right.',
+    body: `There was an issue with your delivery. Please call us at ${getRestaurantPhoneDisplay()} so we can make it right.`,
   },
 }
 
@@ -142,7 +143,7 @@ async function handleWebhook(payload: UberWebhookPayload) {
     if (!order?.customerEmail) return
 
     const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
-    const restaurantPhone = process.env.RESTAURANT_PHONE ?? '(515) 830-9600'
+    const restaurantPhone = getRestaurantPhoneDisplay()
     const trackingUrl = data.tracking_url ?? order.deliveryTrackingUrl
 
     const trackingBtn = trackingUrl

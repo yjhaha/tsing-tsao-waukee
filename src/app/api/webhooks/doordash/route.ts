@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { updateOrderDeliveryStatus, getOrderByDeliveryId } from '@/lib/orderStore'
+import { getRestaurantPhoneDisplay } from '@/lib/restaurant'
 
 export const runtime = 'nodejs'
 
@@ -54,7 +55,7 @@ const STATUS_CUSTOMER_MESSAGES: Record<string, { subject: string; body: string }
   },
   DELIVERY_CANCELLED: {
     subject: '⚠️ Delivery update — please contact us',
-    body: 'There was an issue with your delivery. Please call us at (515) 830-9600 so we can make it right.',
+    body: `There was an issue with your delivery. Please call us at ${getRestaurantPhoneDisplay()} so we can make it right.`,
   },
 }
 
@@ -109,7 +110,7 @@ async function handleWebhook(payload: DdWebhookPayload) {
   if (!order?.customerEmail) return
 
   const restaurantName = process.env.RESTAURANT_NAME ?? 'Tsing Tsao Waukee'
-  const restaurantPhone = process.env.RESTAURANT_PHONE ?? '(515) 830-9600'
+  const restaurantPhone = getRestaurantPhoneDisplay()
 
   const trackingSection = order.deliveryTrackingUrl
     ? `<p style="margin:16px 0"><a href="${order.deliveryTrackingUrl}" style="display:inline-block;background:#D4AF37;color:#180008;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">Track your delivery</a></p>`

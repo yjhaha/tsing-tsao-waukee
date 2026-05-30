@@ -4,6 +4,7 @@ import NavBar from '@/components/NavBar'
 import MostOrderedCarousel from '@/components/MostOrderedCarousel'
 import OpenStatus from '@/components/OpenStatus'
 import { FaUtensils, FaPhone, FaMapMarkerAlt } from 'react-icons/fa'
+import { RESTAURANT_PHONE_TEL_HREF } from '@/lib/restaurant'
 
 const COLLAGE = [
   { src: '/images/menu/sesame_chicken.jpg', alt: 'Sesame Chicken' },
@@ -42,7 +43,7 @@ export default function HomePage() {
                 <Link href="/menu" className="hero-btn gap-2">
                   <FaUtensils className="text-xs" /> VIEW MENU
                 </Link>
-                <a href="tel:+15154902888" className="hero-btn gap-2">
+                <a href={RESTAURANT_PHONE_TEL_HREF} className="hero-btn gap-2">
                   <FaPhone className="text-xs" /> CALL
                 </a>
               </div>
@@ -67,7 +68,7 @@ export default function HomePage() {
                   <Link href="/menu" className="hero-btn gap-2 text-sm">
                     <FaUtensils className="text-xs" /> VIEW MENU
                   </Link>
-                  <a href="tel:+15154902888" className="hero-btn gap-2 text-sm">
+                  <a href={RESTAURANT_PHONE_TEL_HREF} className="hero-btn gap-2 text-sm">
                     <FaPhone className="text-xs" /> CALL
                   </a>
                 </div>
@@ -117,7 +118,7 @@ export default function HomePage() {
                 ))}
               </dl>
               <a
-                href="tel:+15154902888"
+                href={RESTAURANT_PHONE_TEL_HREF}
                 className="shrink-0 flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap"
               >
                 <FaPhone className="text-xs text-brand-gold" /> Order Over Phone
