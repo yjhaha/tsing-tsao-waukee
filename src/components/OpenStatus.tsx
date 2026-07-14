@@ -2,59 +2,45 @@
 
 import { useEffect, useState } from 'react'
 
-// Hours in Central Time (America/Chicago)
-// [dayOfWeek (0=Sun…6=Sat), openHour, openMin, closeHour, closeMin]
-const SCHEDULE: [number, number, number, number, number][] = [
-  [0, 11, 0, 20, 30], // Sunday    11:00 AM – 8:30 PM
-  [1, 11, 0, 21,  0], // Monday    11:00 AM – 9:00 PM
-  [2, 11, 0, 21,  0], // Tuesday
-  [3, 11, 0, 21,  0], // Wednesday
-  [4, 11, 0, 21,  0], // Thursday
-  [5, 11, 0, 21, 30], // Friday    11:00 AM – 9:30 PM
-  [6, 11, 0, 21, 30], // Saturday
-]
+interface StoreStatus {
+  open: boolean
+  reason: string | null
+}
 
-function isOpen(): boolean {
-  // Use Intl to get Central Time parts
-  const now = new Date()
-  const ct = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago',
-    hour: 'numeric',
-    minute: 'numeric',
-    weekday: 'short',
-    hour12: false,
-  }).formatToParts(now)
-
-  const parts: Record<string, string> = {}
-  ct.forEach(p => { parts[p.type] = p.value })
-
-  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-  const dow = dayMap[parts.weekday] ?? -1
-  const h = parseInt(parts.hour, 10)
-  const m = parseInt(parts.minute, 10)
-  const totalMins = h * 60 + m
-
-  const row = SCHEDULE.find(r => r[0] === dow)
-  if (!row) return false
-  const [, oh, om, ch, cm] = row
-  return totalMins >= oh * 60 + om && totalMins < ch * 60 + cm
+async function fetchStatus(): Promise<StoreStatus | null> {
+  try {
+    const res = await fetch('/api/store-status', { cache: 'no-store' })
+    if (!res.ok) return null
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 export default function OpenStatus() {
-  const [open, setOpen] = useState<boolean | null>(null)
+  const [status, setStatus] = useState<StoreStatus | null>(null)
 
   useEffect(() => {
-    setOpen(isOpen())
-    const id = setInterval(() => setOpen(isOpen()), 60_000)
-    return () => clearInterval(id)
+    let cancelled = false
+    function refresh() {
+      fetchStatus().then(s => { if (!cancelled && s) setStatus(s) })
+    }
+    refresh()
+    const id = setInterval(refresh, 60_000)
+    return () => { cancelled = true; clearInterval(id) }
   }, [])
 
-  if (open === null) return null // SSR: render nothing until hydrated
+  if (status === null) return null // render nothing until first fetch resolves
+
+  const { open, reason } = status
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
-      open ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'
-    }`}>
+    <div
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+        open ? 'bg-green-900/40 text-green-400' : 'bg-red-900/40 text-red-400'
+      }`}
+      title={!open && reason ? `Closed — ${reason}` : undefined}
+    >
       <span className="relative flex h-2 w-2">
         <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${open ? 'bg-green-400' : 'bg-red-500'}`} />
         <span className={`relative inline-flex rounded-full h-2 w-2 ${open ? 'bg-green-400' : 'bg-red-500'}`} />

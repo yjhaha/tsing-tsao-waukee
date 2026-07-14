@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import type { DeliveryAddress, DeliveryQuote } from '@/lib/delivery/types'
-import { isOpen } from '@/lib/businessHours'
+import { getStoreStatus } from '@/lib/storeStatus'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-03-25.dahlia',
@@ -39,9 +39,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No items in cart' }, { status: 400 })
     }
 
-    // Enforce business hours server-side; allow through if customer explicitly scheduled
-    if (!scheduledFor && !isOpen()) {
-      return NextResponse.json({ error: 'outside_hours' }, { status: 422 })
+    // Enforce business hours (and any manual closure override) server-side; allow
+    // through only if the customer explicitly scheduled for a genuinely valid time —
+    // an unvalidated scheduledFor would let a stale client bypass a closure that was
+    // toggled on after the cart page loaded.
+    const status = await getStoreStatus()
+    if (scheduledFor) {
+      const sched = new Date(scheduledFor)
+      const earliestValid = status.open ? new Date() : (status.nextOpening ? new Date(status.nextOpening) : null)
+      if (isNaN(sched.getTime()) || !earliestValid || sched < earliestValid) {
+        return NextResponse.json({ error: 'invalid_schedule' }, { status: 422 })
+      }
+    } else if (!status.open) {
+      return NextResponse.json(
+        { error: 'outside_hours', reason: status.reason, nextOpening: status.nextOpening },
+        { status: 422 },
+      )
     }
 
     const isDelivery = orderMode === 'delivery'

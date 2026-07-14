@@ -41,6 +41,13 @@ interface OrderItem {
 type OrderStatus = 'new' | 'active' | 'ready'
 type Theme = 'light' | 'dark'
 
+interface StoreStatus {
+  open: boolean
+  reason: string | null
+  nextOpening: string | null
+  override: { reason: string | null; until: string | null } | null
+}
+
 // ── Theme tokens ─────────────────────────────────────────────────────────────
 // The global tailwind config overrides the `slate` palette to crimson/red for
 // the customer-facing site. The kitchen UI intentionally opts out of that
@@ -593,6 +600,121 @@ function OrderCard({
 }
 
 
+// ── Store Status Panel ───────────────────────────────────────────────────────
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-US', {
+    timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
+function StoreStatusPanel({
+  theme,
+  status,
+  busy,
+  error,
+  onCloseToday,
+  onCloseCustom,
+  onReopen,
+}: {
+  theme: Theme
+  status: StoreStatus | null
+  busy: boolean
+  error: string | null
+  onCloseToday: () => void
+  onCloseCustom: (reason: string, until: string) => void
+  onReopen: () => void
+}) {
+  const t = tokens(theme)
+  const [expanded, setExpanded] = useState(false)
+  const [reason, setReason] = useState('')
+  const [until, setUntil] = useState('')
+
+  if (!status) return null
+
+  const isOverride = !!status.override
+
+  return (
+    <div className={`mx-4 mt-3 rounded-xl border px-4 py-3 ${t.card}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <span className={`inline-flex rounded-full h-2.5 w-2.5 shrink-0 ${status.open ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div>
+            <p className={`text-sm font-semibold ${t.cardTitle}`}>
+              {status.open ? 'Open' : isOverride ? 'Closed — Manual Override' : 'Closed (outside hours)'}
+            </p>
+            {isOverride && (
+              <p className={`text-xs ${t.muted}`}>
+                {status.reason ? status.reason : 'No reason given'}
+                {' — '}
+                {status.nextOpening ? `reopens ${fmtDateTime(status.nextOpening)}` : 'reopens only when manually reopened'}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {isOverride ? (
+          <button
+            type="button"
+            onClick={onReopen}
+            disabled={busy}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${t.btnReady}`}
+          >
+            Reopen Store
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onCloseToday}
+              disabled={busy}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50"
+            >
+              Close for Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpanded(e => !e)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${t.toggle}`}
+            >
+              {expanded ? 'Cancel' : 'Custom…'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {!isOverride && expanded && (
+        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            placeholder="Reason (optional, shown to customers)"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            maxLength={200}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm border outline-none ${t.pinInput} ${t.pinFocus}`}
+          />
+          <input
+            type="datetime-local"
+            value={until}
+            onChange={e => setUntil(e.target.value)}
+            title="Auto-reopen at (optional — leave blank to reopen manually)"
+            className={`px-3 py-2 rounded-lg text-sm border outline-none ${t.pinInput} ${t.pinFocus}`}
+          />
+          <button
+            type="button"
+            onClick={() => { onCloseCustom(reason, until); setExpanded(false); setReason(''); setUntil('') }}
+            disabled={busy}
+            className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            Confirm Closure
+          </button>
+        </div>
+      )}
+
+      {error && <p className={`text-xs mt-2 ${t.errorText}`}>{error}</p>}
+    </div>
+  )
+}
+
 // ── Kitchen Display ───────────────────────────────────────────────────────────
 function KitchenDisplay({
   theme,
@@ -605,6 +727,9 @@ function KitchenDisplay({
   const [orders, setOrders] = useState<Order[]>([])
   // Optimistic overrides — applied immediately on button tap, cleared on next poll
   const [overrides, setOverrides] = useState<Record<string, OrderStatus>>({})
+  const [storeStatus, setStoreStatus] = useState<StoreStatus | null>(null)
+  const [storeStatusBusy, setStoreStatusBusy] = useState(false)
+  const [storeStatusError, setStoreStatusError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState(() => getPollIntervalMs() / 1000)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   // Tracks orders that arrived while the staff was away from the screen
@@ -654,6 +779,46 @@ function KitchenDisplay({
     }
   }, [])
 
+  const fetchStoreStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/store-status', { cache: 'no-store' })
+      if (!res.ok) return
+      setStoreStatus(await res.json())
+    } catch { /* network error — retry next cycle */ }
+  }, [])
+
+  async function postStoreStatus(body: Record<string, unknown>) {
+    setStoreStatusBusy(true)
+    setStoreStatusError(null)
+    try {
+      const res = await fetch('/api/store-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: PIN, ...body }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStoreStatusError(data.error === 'invalid_until' ? 'Reopen time must be in the future.' : 'Failed to update store status.')
+        return
+      }
+      setStoreStatus(data)
+    } catch {
+      setStoreStatusError('Failed to update store status — check your connection.')
+    } finally {
+      setStoreStatusBusy(false)
+    }
+  }
+
+  const closeForToday = useCallback(() => postStoreStatus({ closed: true }), [])
+  const closeCustom = useCallback((reason: string, until: string) => {
+    postStoreStatus({
+      closed: true,
+      ...(reason.trim() ? { reason: reason.trim() } : {}),
+      ...(until ? { until: new Date(until).toISOString() } : {}),
+    })
+  }, [])
+  const reopenStore = useCallback(() => postStoreStatus({ closed: false }), [])
+
   // Initial fetch + polling. We use a recursive setTimeout (not setInterval)
   // because the poll interval changes dynamically by time of day.
   useEffect(() => {
@@ -661,7 +826,7 @@ function KitchenDisplay({
     let cancelled = false
 
     const tick = async () => {
-      await fetchOrders()
+      await Promise.all([fetchOrders(), fetchStoreStatus()])
       if (cancelled) return
       timer = setTimeout(tick, getPollIntervalMs())
     }
@@ -671,7 +836,7 @@ function KitchenDisplay({
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [fetchOrders])
+  }, [fetchOrders, fetchStoreStatus])
 
   // Countdown ticker
   useEffect(() => {
@@ -797,6 +962,16 @@ function KitchenDisplay({
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
       </div>
+
+      <StoreStatusPanel
+        theme={theme}
+        status={storeStatus}
+        busy={storeStatusBusy}
+        error={storeStatusError}
+        onCloseToday={closeForToday}
+        onCloseCustom={closeCustom}
+        onReopen={reopenStore}
+      />
 
       <div className="p-4 max-w-5xl mx-auto">
         {active.length === 0 && done.length === 0 && (

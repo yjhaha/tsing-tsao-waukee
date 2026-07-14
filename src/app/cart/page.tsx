@@ -6,6 +6,7 @@ import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import { useCart } from '@/context/CartContext'
 import type { DeliveryAddress, DeliveryQuote } from '@/lib/delivery/types'
+import { formatNextOpening } from '@/lib/businessHours'
 import {
   FaMapMarkerAlt,
   FaMotorcycle,
@@ -191,26 +192,32 @@ export default function CartPage() {
   const [validating, setValidating] = useState(false)
   const [customTip, setCustomTip] = useState('')
   const [scheduledFor, setScheduledFor] = useState<string | null>(null)
-  const [nextOpening, setNextOpening] = useState<{ iso: string; label: string } | null>(null)
+  const [storeStatus, setStoreStatus] = useState<{ open: boolean; reason: string | null; nextOpening: string | null } | null>(null)
 
-  // Check business hours on mount and when tab regains focus
-  useEffect(() => {
-    function check() {
-      // Dynamic import to avoid SSR issues with Intl.DateTimeFormat timezone
-      import('@/lib/businessHours').then(({ isOpen, getNextOpening, formatNextOpening }) => {
-        if (!isOpen()) {
-          const next = getNextOpening()
-          setNextOpening({ iso: next.toISOString(), label: formatNextOpening(next) })
-        } else {
-          setNextOpening(null)
-          setScheduledFor(null)
-        }
-      })
+  const refreshStoreStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/store-status', { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
+      setStoreStatus(data)
+      if (data.open) setScheduledFor(null)
+    } catch {
+      // network error — keep last known status; server-side checkout still enforces hours
     }
-    check()
-    window.addEventListener('focus', check)
-    return () => window.removeEventListener('focus', check)
   }, [])
+
+  // Check store status on mount and when tab regains focus
+  useEffect(() => {
+    refreshStoreStatus()
+    window.addEventListener('focus', refreshStoreStatus)
+    return () => window.removeEventListener('focus', refreshStoreStatus)
+  }, [refreshStoreStatus])
+
+  const nextOpening = storeStatus && !storeStatus.open && storeStatus.nextOpening
+    ? { iso: storeStatus.nextOpening, label: formatNextOpening(new Date(storeStatus.nextOpening)) }
+    : null
+  const closedIndefinitely = !!(storeStatus && !storeStatus.open && !storeStatus.nextOpening)
+  const closedReason = storeStatus?.reason ?? null
 
   const streetInputRef = useRef<HTMLInputElement | null>(null)
   const autocompleteRef = useRef<any>(null)
@@ -351,12 +358,9 @@ export default function CartPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        if (data.error === 'outside_hours') {
-          // Hours closed between client check and API call — refresh the banner
-          import('@/lib/businessHours').then(({ getNextOpening, formatNextOpening }) => {
-            const next = getNextOpening()
-            setNextOpening({ iso: next.toISOString(), label: formatNextOpening(next) })
-          })
+        if (data.error === 'outside_hours' || data.error === 'invalid_schedule') {
+          // Hours/closure changed between client check and API call — refresh the banner
+          refreshStoreStatus()
           setLoading(false)
           return
         }
@@ -593,10 +597,12 @@ export default function CartPage() {
               </div>
             )}
 
-            {/* Business hours banner */}
+            {/* Business hours / closure banner */}
             {nextOpening && !scheduledFor && (
               <div className="mb-4 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-sm">
-                <p className="text-white font-semibold mb-0.5">We&apos;re currently closed</p>
+                <p className="text-white font-semibold mb-0.5">
+                  {closedReason ? `We're currently closed — ${closedReason}` : "We're currently closed"}
+                </p>
                 <p className="text-slate-400 text-xs mb-3">Next opening: {nextOpening.label}</p>
                 <button
                   onClick={() => setScheduledFor(nextOpening.iso)}
@@ -604,6 +610,15 @@ export default function CartPage() {
                 >
                   Schedule for {nextOpening.label}
                 </button>
+              </div>
+            )}
+
+            {closedIndefinitely && !scheduledFor && (
+              <div className="mb-4 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-sm">
+                <p className="text-white font-semibold mb-0.5">
+                  {closedReason ? `We're currently closed — ${closedReason}` : "We're currently closed"}
+                </p>
+                <p className="text-slate-400 text-xs">Please check back later.</p>
               </div>
             )}
 
@@ -625,7 +640,7 @@ export default function CartPage() {
             <div className="space-y-2">
               <button
                 onClick={() => handleCheckout(scheduledFor ?? undefined)}
-                disabled={loading || !canCheckout || (!!nextOpening && !scheduledFor)}
+                disabled={loading || !canCheckout || ((!!nextOpening || closedIndefinitely) && !scheduledFor)}
                 className="w-full py-4 bg-brand-gold text-slate-900 rounded-xl font-bold text-base
                            hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150
                            disabled:opacity-60 disabled:cursor-not-allowed"
